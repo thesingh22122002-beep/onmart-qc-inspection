@@ -1,0 +1,16 @@
+{
+  "name": "onmart-qc-inspection",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ON MART QC store inspection system — multi-device web app and PWA",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4"
+  }
+}
