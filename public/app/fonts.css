@@ -1,0 +1,13 @@
+@font-face{
+  font-family:'ONMART Khmer';
+  src:url('/NotoSansKhmer-Regular.woff2') format('woff2');
+  font-weight:400;font-style:normal;font-display:swap;
+}
+@font-face{
+  font-family:'ONMART Khmer';
+  src:url('/NotoSansKhmer-Bold.woff2') format('woff2');
+  font-weight:700;font-style:normal;font-display:swap;
+}
+html,body{margin:0;padding:0}
+body{font-family:'ONMART Khmer','Khmer OS','Noto Sans Khmer','Khmer UI','Leelawadee UI',system-ui,-apple-system,Segoe UI,sans-serif}
+*{box-sizing:border-box}

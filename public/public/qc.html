@@ -18,6 +18,13 @@
 <script src="/vendor/jszip.min.js"></script>
 <script src="/vendor/jspdf.umd.min.js"></script>
 <script src="/vendor/jspdf.plugin.autotable.min.js"></script>
+<link rel="preload" href="/NotoSansKhmer-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:'ONMART Khmer';src:url('/NotoSansKhmer-Regular.woff2') format('woff2');
+  font-weight:400;font-style:normal;font-display:swap;}
+@font-face{font-family:'ONMART Khmer';src:url('/NotoSansKhmer-Bold.woff2') format('woff2');
+  font-weight:700;font-style:normal;font-display:swap;}
+</style>
 <style>
 :root{
   --ink:#12151B;
@@ -38,9 +45,9 @@
   --fail:#CF4331;
   --warn:#C98A1B;
   --radius:10px;
-  --display:'Space Grotesk','Noto Sans Khmer',sans-serif;
-  --body:'Inter','Noto Sans Khmer',sans-serif;
-  --mono:'IBM Plex Mono','Noto Sans Khmer',monospace;
+  --display:'ONMART Khmer','Khmer OS','Noto Sans Khmer','Khmer UI','Leelawadee UI',system-ui,sans-serif;
+  --body:'ONMART Khmer','Khmer OS','Noto Sans Khmer','Khmer UI','Leelawadee UI',system-ui,sans-serif;
+  --mono:'ONMART Khmer','Khmer OS','Noto Sans Khmer',ui-monospace,monospace;
 }
 *{box-sizing:border-box;}
 body{margin:0;background:var(--canvas);color:var(--text);font-family:var(--body);}
@@ -339,8 +346,8 @@ body{margin:0;background:var(--canvas);color:var(--text);font-family:var(--body)
 
 <div class="topbar">
   <div class="brand">
-    <div class="mark" style="background:var(--brand-blue);display:flex;align-items:center;justify-content:center;">
-      <span style="font-family:var(--display);font-weight:700;font-size:15px;color:#fff;letter-spacing:.5px;">OM</span>
+    <div class="mark" style="background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+      <img src="/logo.png" alt="ON MART" style="width:100%;height:100%;object-fit:contain;padding:3px;box-sizing:border-box;">
     </div>
     <div>
       <h1>ប្រព័ន្ធត្រួតពិនិត្យគុណភាព QC</h1>
@@ -582,14 +589,14 @@ const AUDITORS = ['ថៃ សីហា', '(បន្ថែមអ្នកសវ�
 const SHIFTS = ['ព្រឹក','រសៀល','យប់'];
 
 const PILLARS = [
- {key:"SERVE",title:"SERVE — សេវាកម្ម (ភាពប្រសើរឥតខ្ចោះនៃសេវាកម្ម)",startRow:11,subtotalRow:16,items:[
+ {key:"SERVE",title:"SERVE — ផ្តល់នូវ (Service · សេវាកម្ម)",startRow:11,subtotalRow:16,items:[
   {no:1,desc:"ការស្វាគមន៍អតិថិជន៖ ស្នាមញញឹម ការសម្លឹងភ្នែក ការប្រើភាសាសមស្រប (ទម្ងន់ពិន្ទុគុណនឹង៣) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និងការត្រួតពិនិត្យ CCTV",standard:"ការនិយាយស្វាគមន៍ដោយសុភាពរាបសារជាមួយស្នាមញញឹម បុគ្គលិកញញឹម និងស្វាគមន៍។\n-ការនិយាយត្រូវស្វាគមន៍អតិថិជនដោយនិយាយថា \"សួស្តីបង\" (ឬប្រើពាក្យគួរសមផ្សេងទៀត ដូចជា បង បងប្រុស/បងស្រី ពូ មីង) ដោយសំឡេងសុភាព និងស្នាមញញឹមរួសរាយ។\n-បុគ្គលិកនៅតំបន់លក់ត្រូវញញឹម និងស្វាគមន៍ដោយផ្ទាល់មាត់ដោយនិយាយថា \"សួស្តីបង\"។\nកំណត់ចំណាំ៖ ការស្វាគមន៍អតិថិជននៅទូទាំងហាង និងតំបន់លក់ ត្រូវប្រើឃ្លា \"សួស្តីបង\"។",max:20,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
   {no:2,desc:"ជំហានទាំង៨នៃសេវាបង់ប្រាក់ និងគិតលុយ (ទម្ងន់ពិន្ទុគុណនឹង៣) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"1.ការស្វាគមន៍៖ ស្វាគមន៍អតិថិជនដោយសុភាព ស្នាមញញឹម និងណែនាំខ្លួន។ ឧទាហរណ៍៖ \"សួស្តីបង ខ្ញុំឈ្មោះ (ឈ្មោះសានិយ)\"។\n2.ការលក់បន្ថែម/ការលក់ឆ្លងផលិតផល៖ ស្នើផលិតផលបន្ថែមដើម្បីបង្កើនការលក់។\n3.ស្កេនផលិតផលឱ្យបានត្រឹមត្រូវ៖ ស្កេនគ្រប់ទំនិញឱ្យបានត្រឹមត្រូវ (ចំពោះទំនិញដូចគ្នា អាចប្រើប៊ូតុងចំនួនចាប់ពី៥ឯកតាឡើងទៅ)។\n4.ផ្តល់សម្ភារៈប្រើប្រាស់៖ ផ្តល់សម្ភារៈចាំបាច់ដូចជា ថង់ ចង្កឺះ ស្លាបព្រា ឬសម្ភារៈផ្សេងទៀតតាមតម្រូវការអតិថិជន។\n5.បញ្ជាក់ការបញ្ជាទិញ និងចំនួនទឹកប្រាក់សរុប៖ បញ្ជាក់ចំនួនទំនិញ និងចំនួនទឹកប្រាក់សរុប (KHR/USD) ឱ្យបានច្បាស់លាស់។\n6.បញ្ជាក់វិធីបង់ប្រាក់៖ សួរអតិថិជនអំពីវិធីបង់ប្រាក់ដែលពួកគេចង់បាន។ ឧទាហរណ៍៖ \"បងសង់ជាសាច់ប្រាក់ ឬផ្ទេរតាមធនាគារ? បងអាចស្កេន QR កូដនៅលើអេក្រង់បាន\"។\n7.ផ្តល់ប្រាក់អាប់ និងបង្កាន់ដៃ៖ ប្រសិនបើមានប្រាក់អាប់ ត្រូវប្រកាសចំនួនប្រាក់អាប់ឱ្យច្បាស់លាស់ និងផ្តល់បង្កាន់ដៃ។\n8.អរគុណអតិថិជន៖ អរគុណដោយស្នាមញញឹម និងកាយវិការគួរសម។ ឧទាហរណ៍៖ \"អរគុណច្រើនបង សូមអញ្ជើញមកម្តងទៀត\"។",max:20,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
   {no:3,desc:"ការគ្រប់គ្រងជួរអតិថិជន៖ បើកខោនធ័របន្ថែមភ្លាមៗ (ទម្ងន់ពិន្ទុគុណនឹង៣) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និងការត្រួតពិនិត្យ CCTV។\nនៅពេលមានអតិថិជនមួយ ឬច្រើននាក់កំពុងឈរតម្រៀបជួរ ត្រូវអនុវត្តដូចខាងក្រោម៖\n-បើកខោនធ័រទី២ភ្លាមៗ\n-ប្រសិនបើអតិថិជននៅតែឈររង់ចាំ ត្រូវបើកខោនធ័រទី៣ (ប្រសិនបើមាន)\n-ប្រសិនបើខោនធ័រទាំងអស់បើកអស់ហើយ ហើយអតិថិជននៅតែរង់ចាំ ត្រូវប្រគល់ភារកិច្ចឱ្យបុគ្គលិកម្នាក់ជួយវេចខ្ចប់ទំនិញ",max:20,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
   {no:4,desc:"ភាសា និងឥរិយាបថសេវាកម្ម៖ គួរសម វិជ្ជាជីវៈ (ទម្ងន់ពិន្ទុគុណនឹង៣) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និងការត្រួតពិនិត្យ CCTV។ បុគ្គលិកមិនត្រូវបង្ហាញឥរិយាបថមិនសមរម្យចំពោះអតិថិជនឡើយ រួមមាន៖\n-បង្ហាញឥរិយាបថគ្មានការគោរព\n-ប្រើភាសាមិនសមរម្យ\n-និយាយគ្នាក្នុងចំណោមបុគ្គលិកនៅចំពោះមុខអតិថិជន\n-ឆ្លើយតបទៅអតិថិជនដោយភាពមិនពេញចិត្ត\n-បដិសេធមិនផ្តល់សេវាកម្ម\n-មិនយកចិត្តទុកដាក់ពេលអតិថិជននិយាយ\n-មិនសុំទោសនៅពេលមានកំហុសកើតឡើង\n-បញ្ជាក់ការរងចាំទៅកាន់អតិថិជន (កម្តៅអាហារឬភេស្ជៈ) ដោយសូមអធ្យាស្រ័យចំពោះការរងចាំបង",max:20,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
   {no:5,desc:"ឯកសណ្ឋាន និងភាពស្អាតរូបរាង៖ ស្អាត ពេញលេញ ស្លាកឈ្មោះមើលឃើញច្បាស់ (ទម្ងន់ពិន្ទុគុណនឹង៣) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"បុគ្គលិកត្រូវរក្សារូបរាងផ្ទាល់ខ្លួនឱ្យស្អាត និងមានលក្ខណៈវិជ្ជាជីវៈ។ តម្រូវការរួមមាន៖\n-ឯកសណ្ឋានត្រូវស្អាត ត្រូវបានអ៊ុត និងគ្មានស្នាមប្រឡាក់ ខូចខាត ឬហែក\n-ពាក់អាវផ្លូវការរបស់ក្រុមហ៊ុន/អាវក្រណាត់/ខោអាវការី\n-ពាក់ខោពណ៌ខ្មៅ\n-ពាក់ស្រោមជើងពណ៌ខ្មៅ\n-ពាក់ស្បែកជើងពណ៌ខ្មៅ\n-ស្លាកឈ្មោះត្រូវពាក់ជានិច្ចក្នុងអំឡុងពេលបំពេញការងារ\nសូមមើលតារាងលេខ៧ ស្តីពីអនាម័យ និងសម្អាតរូបរាងផ្ទាល់ខ្លួន",max:20,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
  ]},
- {key:"SHOW",title:"SHOW — ការតាំងបង្ហាញទំនិញ (ការគ្រប់គ្រងការតាំងបង្ហាញទំនិញ)",startRow:18,subtotalRow:25,items:[
+ {key:"SHOW",title:"SHOW — បង្ហាញ (Assortment · ការគ្រប់គ្រងទំនិញ)",startRow:18,subtotalRow:25,items:[
   {no:6,desc:"ស្តុកសម្ភារៈប្រើប្រាស់ (អប្បបរមាក្នុងមួយ SKU) (ទម្ងន់ពិន្ទុគុណនឹង៥)",standard:"QC នឹងធ្វើការត្រួតពិនិត្យដោយចៃដន្យលើប្រភេទផលិតផលចំនួន៣ ហើយផលិតផលនីមួយៗដែលបានជ្រើសរើសត្រូវមានស្តុកយ៉ាងតិច៥ឯកតា។ ផលិតផលកាហ្វេត្រូវរក្សាការផ្គត់ផ្គង់គ្រប់គ្រាន់ដោយគ្មានការខ្វះខាត៖ SKU នីមួយៗត្រូវមានយ៉ាងតិច៥ឯកតា។ ផលិតផលទឹកអំពៅ/ស៊ីរ៉ូដែលផ្គត់ផ្គង់ពីឃ្លាំង ឬអ្នកផ្គត់ផ្គង់ត្រូវមានស្តុកគ្រប់គ្រាន់។ ពែងកាហ្វេ និងសម្ភារៈប្រើប្រាស់ត្រូវមានគ្រប់គ្រាន់។",max:10,scale:["៥ករណី", "៤ករណី", "៤ករណី", "៣ករណី", "១ករណី", "មិនជួប"]},
   {no:7,desc:"ការតម្រៀបផ្ទាំងមុខ និងជួរមុខ (លក្ខខណ្ឌមួយណាដែលធ្វើឱ្យលទ្ធផលត្រួតពិនិត្យទាំងមូលធ្លាក់)",standard:"-Fronting (ការតម្រៀបផ្ទាំងមុខ)៖ ធ្នើរ ឬទូមួយត្រូវមានចន្លោះទទេ២ជាន់។ ជាន់នីមួយៗត្រូវមាន SKU ចំនួន២\n-Facing (ការតម្រៀបជួរមុខ)៖ ធ្នើរ ឬទូមួយត្រូវមានចន្លោះទទេ២ជាន់។ រាប់ចាប់ពីទីតាំងទំនិញទី៣ឡើងទៅ",max:10,scale:["១ករណី", "-", "-", "-", "-", "មិនជួប"]},
   {no:8,desc:"ភាពត្រឹមត្រូវនៃស្លាកតម្លៃផ្គូផ្គងជាមួយផលិតផល (ទម្ងន់ពិន្ទុគុណនឹង៥)",standard:"-ស្លាកតម្លៃត្រូវត្រឹមត្រូវ និងដាក់ត្រឹមត្រូវតាមទីតាំង។\n-ផលិតផលមិនត្រូវលើសពីគែមធ្នើរ ជាពិសេសសម្រាប់ធ្នើរដែលមិនបានភ្ជាប់ជាមួយជញ្ជាំង។\n-ផលិតផលមិនត្រូវលើសពីពាក់កណ្តាលកម្ពស់ទំនិញនៅខាងក្រៅគែមធ្នើរ។",max:20,scale:["៥ករណី", "៤ករណី", "៤ករណី", "៣ករណី", "១ករណី", "មិនជួប"]},
@@ -598,41 +605,41 @@ const PILLARS = [
   {no:11,desc:"ភាពមានស្តុករបស់ផលិតផលទូទៅ (ទម្ងន់ពិន្ទុគុណនឹង៥)",standard:"ផលិតផលទូទៅ និងផលិតផលថ្មីទាំងអស់មិនត្រូវអស់ស្តុកឡើយ។ ការត្រួតពិនិត្យចាប់ផ្តើមពីថ្ងៃដំបូងនៃការលក់ផលិតផល ដោយធានាថា SKU ទាំងអស់មានផ្គត់ផ្គង់។\nលក្ខខណ្ឌខ្វះស្តុក៖\n-ផលិតផលដែលមានអាយុកាលប្រើប្រាស់១-៣១ថ្ងៃ ត្រូវមានយ៉ាងតិច១ឯកតា\n-ផលិតផលដែលមានអាយុកាលប្រើប្រាស់៣២ថ្ងៃឡើងទៅ ត្រូវមានយ៉ាងតិច២ឯកតា",max:40,scale:["៥ករណី", "៤ករណី", "៤ករណី", "៣ករណី", "១ករណី", "មិនជួប"]},
   {no:12,desc:"ភាពមានស្តុករបស់ផលិតផលលក់ដាច់បំផុត (មិនអស់ស្តុក) (ទម្ងន់ពិន្ទុគុណនឹង៥)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយផ្ទាល់ដោយ QC។ ផលិតផលលក់ដាច់បំផុតមិនត្រូវអស់ស្តុកឡើយ។\nលក្ខខណ្ឌខ្វះស្តុក៖\n-ផលិតផលដែលមានអាយុកាលប្រើប្រាស់១-៣១ថ្ងៃ ត្រូវមានយ៉ាងតិច១ឯកតា\n-ផលិតផលដែលមានអាយុកាលប្រើប្រាស់៣២ថ្ងៃឡើងទៅ ត្រូវមានយ៉ាងតិច២ឯកតា",max:80,scale:["៥ករណី", "៤ករណី", "៤ករណី", "៣ករណី", "១ករណី", "មិនជួប"]},
  ]},
- {key:"SUPPLY",title:"SUPPLY — ការផ្គត់ផ្គង់ (គុណភាព និងសុវត្ថិភាពចំណីអាហារ)",startRow:27,subtotalRow:32,items:[
+ {key:"SUPPLY",title:"SUPPLY — ផ្គត់ផ្គង់ (Quality · គុណភាពផលិតផល)",startRow:27,subtotalRow:32,items:[
   {no:13,desc:"គុណភាព និងស្ថានភាពផលិតផល (ទម្ងន់ពិន្ទុគុណនឹង៥)",standard:"មិនត្រូវមានផលិតផលខូចខាត ឬគុណភាពអន់នៅលើធ្នើរ ឬក្នុងតំបន់រៀបចំ/ស្តុក (រួមទាំង ON Café, Jet Spray, Bake)។ សូមមើលតារាងលេខ១ ស្តីពីការគ្រប់គ្រងគុណភាពផលិតផល",max:40,scale:["៥ករណី", "៤ករណី", "៤ករណី", "៣ករណី", "១ករណី", "មិនជួប"]},
   {no:14,desc:"ការអនុលោមតាមស្តង់ដារផ្ទុកទំនិញ (ទម្ងន់ពិន្ទុគុណនឹង៥) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"ផលិតផលទាំងអស់ត្រូវផ្ទុកឱ្យបានត្រឹមត្រូវតាមស្តង់ដារ។ សូមមើលតារាងលេខ២ ស្តីពីការរៀបចំ និងផ្ទុកទំនិញ",max:20,scale:["៥ករណី", "៤ករណី", "៤ករណី", "៣ករណី", "១ករណី", "មិនជួប"]},
   {no:15,desc:"ការរៀបចំ និងគ្រប់គ្រងចំណីអាហារតាម SOP, Handling (ទម្ងន់ពិន្ទុគុណនឹង៥) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV។ ចំណីអាហារត្រូវរៀបចំ និងគ្រប់គ្រងឱ្យបានត្រឹមត្រូវតាមស្តង់ដារអាយុកាលប្រើប្រាស់ និងការបិទស្លាក (រួមទាំង ON Café, Jet Spray, Bake)។ សូមមើលតារាងលេខ២",max:40,scale:["៥ករណី", "៤ករណី", "៤ករណី", "៣ករណី", "១ករណី", "មិនជួប"]},
   {no:16,desc:"ការគ្រប់គ្រងផុតកំណត់ ការដោះស្រាយ និងការដកចេញនៃចំណីអាហារ (លក្ខខណ្ឌមួយណាដែលធ្វើឱ្យលទ្ធផលត្រួតពិនិត្យទាំងមូលធ្លាក់ចាញ់) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV។ មិនត្រូវមានចំណីអាហារផុតកំណត់ ឬត្រូវដកចេញ (រួមទាំង ON Café, Hot Station, Jet Spray, Bake)។ ប្រសិនបើរកឃើញ → កត់ត្រាក្នុងបញ្ជីសកម្មភាព (Action List) និងបំផ្លាញផលិតផលដែលផុតកំណត់។ សូមមើលតារាងលេខ២",max:100,scale:["១ករណី", "-", "-", "-", "-", "មិនជួប"]},
   {no:17,desc:"ការគ្រប់គ្រងផុតកំណត់ និងការដកចេញនៃផលិតផលមិនមែនចំណីអាហារ (លក្ខខណ្ឌមួយណាដែលធ្វើឱ្យលទ្ធផលត្រួតពិនិត្យទាំងមូលធ្លាក់ចាញ់) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV។ មិនត្រូវមានផលិតផលមិនមែនចំណីអាហារផុតកំណត់ ឬត្រូវដកចេញ។ អនុវត្តតាមនីតិវិធីបញ្ជីសកម្មភាពដូចគ្នា ប្រសិនបើរកឃើញ។ សូមមើលតារាងលេខ២",max:50,scale:["១ករណី", "-", "-", "-", "-", "មិនជួប"]},
  ]},
- {key:"SAVE",title:"SAVE — តម្លៃ (Value)",startRow:34,subtotalRow:36,items:[
+ {key:"SAVE",title:"SAVE — សន្សំ (Value · គុណតម្លៃ)",startRow:34,subtotalRow:36,items:[
   {no:18,desc:"ប្រព័ន្ធផ្សព្វផ្សាយពាណិជ្ជកម្មខាងក្រៅ (មុខហាង) (ទម្ងន់ពិន្ទុគុណនឹង៥)",standard:"ត្រួតពិនិត្យដោយចៃដន្យដោយ QC។ បដសាំងច្បាស់លាស់/គ្មានខូចខាត ទីតាំង និងបរិមាណត្រឹមត្រូវ ធ្វើបច្ចុប្បន្នភាព១០០% គ្មានយុទ្ធនាការផុតកំណត់តាំងបង្ហាញ។\n-បដសាំងមិនត្រូវពណ៌ស្លេក រហែក ឬពាក្យលុប។\n-ត្រូវដំឡើងនៅទីតាំងកំណត់ត្រឹមត្រូវ។\n-ត្រូវមានចំនួនតាំងបង្ហាញគ្រប់គ្រាន់តាមតម្រូវការ។\n-ត្រូវធ្វើបច្ចុប្បន្នភាព១០០% និងមិនផុតកំណត់។",max:10,scale:["៥ករណី", "៤ករណី", "៤ករណី", "៣ករណី", "១ករណី", "មិនជួប"]},
   {no:19,desc:"ប្រព័ន្ធផ្សព្វផ្សាយពាណិជ្ជកម្មខាងក្នុង (ក្នុងហាង) (ទម្ងន់ពិន្ទុគុណនឹង៥)",standard:"ត្រួតពិនិត្យដោយចៃដន្យដោយ QC។ បដសាំងច្បាស់លាស់/គ្មានខូចខាត ទីតាំង និងបរិមាណត្រឹមត្រូវ ធ្វើបច្ចុប្បន្នភាព១០០% គ្មានយុទ្ធនាការផុតកំណត់តាំងបង្ហាញ។\n-បដសាំងមិនត្រូវពណ៌ស្លេក រហែក ឬពាក្យលុប។\n-ត្រូវដំឡើងនៅទីតាំងកំណត់ត្រឹមត្រូវ។\n-ត្រូវមានចំនួនតាំងបង្ហាញគ្រប់គ្រាន់តាមតម្រូវការ។\n-ត្រូវធ្វើបច្ចុប្បន្នភាព១០០% និងមិនផុតកំណត់។",max:10,scale:["៥ករណី", "៤ករណី", "៤ករណី", "៣ករណី", "១ករណី", "មិនជួប"]},
  ]},
- {key:"SECURE",title:"SECURE — សុវត្ថិភាព (សុវត្ថិភាព និងភាពត្រៀមខ្លួន)",startRow:38,subtotalRow:42,items:[
+ {key:"SECURE",title:"SECURE — សុវត្ថិភាព (Safety & Readiness · សុវត្ថិភាព និង ភាពត្រៀមខ្លួន)",startRow:38,subtotalRow:42,items:[
   {no:20,desc:"ស្ថានភាព និងប្រតិបត្តិការគ្រឿងបរិក្ខារ (លក្ខខណ្ឌមួយណាដែលធ្វើឱ្យលទ្ធផលត្រួតពិនិត្យទាំងមូលធ្លាក់ចាញ់) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"គ្រឿងបរិក្ខារទាំងអស់ត្រូវដំណើរការបានពេញលេញ និងគ្មានខូចខាត ហើយមិនប៉ះពាល់ដល់រូបរាងហាង។ ប្រសិនបើគ្រឿងបរិក្ខារណាមួយខូចខាត ត្រូវកត់ត្រាក្នុងសៀវភៅកំណត់ហេតុហាង (Store Logbook) ក្នុងរយៈពេលកំណត់ និងជួសជុល ឬប្តូរថ្មីប្រសិនបើចាំបាច់។ ឧទាហរណ៍៖ គ្រឿងបរិក្ខារ ON Café ម៉ាស៊ីនកម្តៅរលក ជាដើម។",max:5,scale:["១ករណី", "-", "-", "-", "-", "មិនជួប"]},
   {no:21,desc:"កំណត់ត្រាសីតុណ្ហភាពពីរដងក្នុងមួយថ្ងៃ (លក្ខខណ្ឌមួយណាដែលធ្វើឱ្យលទ្ធផលត្រួតពិនិត្យទាំងមូលធ្លាក់ចាញ់) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"សីតុណ្ហភាពត្រូវកត់ត្រាពីរដងក្នុងមួយថ្ងៃតាមម៉ោងកំណត់។ ម៉ោងកត់ត្រា៖ ម៉ោង១០ព្រឹក និងម៉ោង១០យប់ (±១ម៉ោង)។ ប្រើសញ្ញា \"/\" ក្នុងកាតកត់ត្រាសីតុណ្ហភាព។\n-ប្រសិនបើសីតុណ្ហភាពមិនស្របតាមស្តង់ដារ ត្រូវពិនិត្យម្តងទៀតក្នុងរយៈពេល២ម៉ោង។\n-ប្រសិនបើសីតុណ្ហភាពនៅតែមិនធម្មតា ត្រូវស្នើសុំជួសជុលក្នុងរយៈពេល៧ថ្ងៃ។",max:5,scale:["១ករណី", "-", "-", "-", "-", "មិនជួប"]},
   {no:22,desc:"ភាពត្រៀមខ្លួនរបស់គ្រឿងបរិក្ខារសុវត្ថិភាព (ទម្ងន់ពិន្ទុគុណនឹង៣) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"គ្រឿងបរិក្ខារសុវត្ថិភាពត្រូវត្រៀមរួចរាល់សម្រាប់ការប្រើប្រាស់ និងគ្មានខូចខាត ឬបាក់បែក។ ប្រសិនបើគ្រឿងបរិក្ខារណាមួយខូចខាត ត្រូវកត់ត្រាក្នុងសៀវភៅកំណត់ហេតុហាងក្នុងរយៈពេលកំណត់ និងជួសជុល ឬប្តូរថ្មីប្រសិនបើចាំបាច់។\nសូមមើលតារាងលេខ៣ ស្តីពីការត្រួតពិនិត្យសុវត្ថិភាព (Risk A = Rating 0)",max:15,scale:["Risk A ឬ Risk B (៣ករណី)", "-", "-", "Risk B (១-២ករណី)", "-", "មិនជួប"]},
   {no:23,desc:"ការគ្រប់គ្រង 5S និងឯកសារ (លក្ខខណ្ឌមួយណាដែលធ្វើឱ្យលទ្ធផលត្រួតពិនិត្យទាំងមូលធ្លាក់ចាញ់) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"ផលិតផល សម្ភារៈប្រើប្រាស់ និងឯកសារត្រូវរៀបចំតាមគោលការណ៍ ស5។\nសូមមើលតារាងលេខ៤ ស្តីពីការត្រួតពិនិត្យ ស5",max:5,scale:["១ករណី", "-", "-", "-", "-", "មិនជួប"]},
  ]},
- {key:"SANITIZE",title:"SANITIZE — អនាម័យ (ភាពស្អាត និងអនាម័យ)",startRow:44,subtotalRow:53,items:[
-  {no:24,desc:"តំបន់មុខហាង (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ តំបន់ខាងក្រៅហាងត្រូវស្អាត១០០% រួមមាន៖ តំបន់ចតរថយន្ត តំបន់ ATM ជញ្ជាំង/ជើងសសរហាង ផ្ទៃកញ្ចក់ ក្បឿងជាន់ ដំបូល/ពិដាន ធុងសំរាម និងស្លាកសញ្ញាហាង។ សូមមើលតារាងលេខ៥ ស្តីពីការត្រួតពិនិត្យ និងបញ្ជាក់ការសម្អាត",max:20,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
-  {no:25,desc:"តំបន់ខាងក្នុងហាង (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ តំបន់ខាងក្នុងហាងត្រូវស្អាត១០០% រួមមាន៖ ទ្វារចូលហាង ជញ្ជាំង/ជើងសសរ ក្បឿងជាន់ ដំបូល/ពិដាន ផ្ទៃកញ្ចក់ ធុងសំរាម តំបន់លាងសម្អាត តំបន់ក្រោមចង្ក្រានលាង កញ្រ្ចែងទំនិញ ក្តារបញ្ជីមុខម្ហូប ទ្វារបន្ទប់ខាងក្នុង ខោនធ័រភេសជ្ជៈ ខោនធ័រម្ហូបអាហារ ខោនធ័រគិតលុយ តំបន់ POS ទូសម្ភារៈ ធុងបារី ធ្នើរស្រា និងជ្រុងផ្សេងទៀតរបស់ហាង។ សូមមើលតារាងលេខ៥",max:30,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
-  {no:26,desc:"តំបន់ខាងក្រោយហាង (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ តំបន់បន្ទប់ខាងក្រោយត្រូវស្អាត១០០% រួមមាន៖ ចង្ក្រានលាងគ្រឿងបរិក្ខារ ចង្ក្រានលាងម៉ុប ក្បឿងជាន់ ធ្នើរ/ទូសម្ភារៈប្រើប្រាស់ ជញ្ជាំង/ជើងសសរ ដំបូល/ពិដាន ប្រអប់ផ្ទុកទំនិញខូចខាត តំបន់ធុងទឹក តំបន់វ៉ុល ស្ថានភាពគ្រប់គ្រងសត្វល្អិត និងជ្រុងផ្សេងទៀត។ សូមមើលតារាងលេខ៥",max:15,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
-  {no:27,desc:"គ្រឿងបរិក្ខារភេសជ្ជៈ (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ គ្រឿងបរិក្ខារភេសជ្ជៈត្រូវស្អាត១០០% រួមមាន៖\nគ្រឿងបរិក្ខារខោនធ័រភេសជ្ជៈ៖ Jet Spray ម៉ាស៊ីនស្លាស់ស៊ី ម៉ាស៊ីនចាក់កូកាកូឡា\nម៉ាស៊ីន Post Mix ប្រព័ន្ធ BIB ម៉ាស៊ីនធ្វើទឹកកក\nម៉ាស៊ីនភេសជ្ជៈក្តៅ៖ ស្ថានីយ៍ ON Café ម៉ាស៊ីនកាហ្វេ ម៉ាស៊ីនកិន ប្រអប់ទឹកកក ធុងអ៊ីណុក\nគ្រឿងបរិក្ខារផ្សេងទៀត៖ ទូវ៉ុល ទូទឹកកក ទូការ៉េមទឹកកក ម៉ាស៊ីនធ្វើទឹកកក\nសូមមើលតារាងលេខ៥",max:20,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
-  {no:28,desc:"គ្រឿងបរិក្ខារចំណីអាហារ (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ គ្រឿងបរិក្ខារចំណីអាហារត្រូវស្អាត១០០% រួមមាន៖ ទូរៀបចំ ម៉ាស៊ីនចំហុយ ឡ ម៉ាស៊ីនកម្តៅរលក គ្រឿងបរិក្ខារសាំងវិច ថាស កាំបិត ទូកម្តៅចំណីអាហារ ដង្កៀប គ្រឿងបរិក្ខារចែកបុន និងធុងសម្ភារៈប្រើប្រាស់។ សូមមើលតារាងលេខ៥",max:20,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
-  {no:29,desc:"តំបន់ម្ហូបលឿន/តាំងបង្ហាញ (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ គ្រឿងបរិក្ខារ និងធ្នើរទាំងអស់ត្រូវស្អាត១០០% រួមមាន៖\n-ធ្នើរផលិតផលមិនមែនចំណីអាហារ\n-ធ្នើរចំណីអាហារកែច្នៃ\n-ធ្នើរនំបុ័ង\n-តំបន់តាំងបង្ហាញផលិតផល\n-ស្លាកតម្លៃ\nគ្រឿងបរិក្ខារត្រជាក់រួមមាន៖ ទូទឹកកក Sanyo ទូទឹកកក Traflo និងទូបើកចំហ។ សូមមើលតារាងលេខ៥",max:20,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
-  {no:30,desc:"ឧបករណ៍ និងសារធាតុគីមីសម្អាត (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ ឧបករណ៍សម្អាតត្រូវថែទាំឱ្យបានត្រឹមត្រូវ រួមមាន៖\n-ត្រូវប្រើសញ្ញា \"ប្រយ័ត្នរអិល\" (Wet floor sign) ពេលសម្អាត\n-កន្ទបសម្អាតជាន់មិនត្រូវពណ៌ខ្មៅ ឬមានក្លិនស្អុយ\n-កន្សែងសម្រាប់ដៃ ឬគ្រឿងបរិក្ខារមិនត្រូវរហែក ឬកខ្វក់\n-សារធាតុគីមីសម្អាតត្រូវមានគ្រប់គ្រាន់ និងប្រើប្រាស់ត្រឹមត្រូវ\nសូមមើលតារាងលេខ៥",max:10,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
-  {no:31,desc:"ទូ/កន្លែងផ្ទុកគ្រឿងបរិក្ខារផ្នែកស្តុក (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ ទូផ្ទុកគ្រឿងបរិក្ខារត្រូវស្អាត និងរៀបចំបានត្រឹមត្រូវ១០០% រួមមាន៖\n-មិនត្រូវផ្ទុកគ្រឿងបរិក្ខារកខ្វក់ក្នុងទូ\n-គ្រឿងបរិក្ខារត្រូវផ្ទុកបញ្ច្រាស ឬដាក់ត្រឹមត្រូវ\n-មិនត្រូវផ្ទុកវត្ថុមិនពាក់ព័ន្ធក្នុងទូគ្រឿងបរិក្ខារ\nសូមមើលតារាងលេខ៥",max:10,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
+ {key:"SANITIZE",title:"SANITIZE — អនាម័យ (Cleanliness & Hygiene · ភាពស្អាត និងអនាម័យ)",startRow:44,subtotalRow:53,items:[
+  {no:24,desc:"ភាពស្អាតតំបន់មុខហាង (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ តំបន់ខាងក្រៅហាងត្រូវស្អាត១០០% រួមមាន៖ តំបន់ចតរថយន្ត តំបន់ ATM ជញ្ជាំង/ជើងសសរហាង ផ្ទៃកញ្ចក់ ក្បឿងជាន់ ដំបូល/ពិដាន ធុងសំរាម និងស្លាកសញ្ញាហាង។ សូមមើលតារាងលេខ៥ ស្តីពីការត្រួតពិនិត្យ និងបញ្ជាក់ការសម្អាត",max:20,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
+  {no:25,desc:"ភាពស្អាតតំបន់ខាងក្នុងហាង (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ តំបន់ខាងក្នុងហាងត្រូវស្អាត១០០% រួមមាន៖ ទ្វារចូលហាង ជញ្ជាំង/ជើងសសរ ក្បឿងជាន់ ដំបូល/ពិដាន ផ្ទៃកញ្ចក់ ធុងសំរាម តំបន់លាងសម្អាត តំបន់ក្រោមចង្ក្រានលាង កញ្រ្ចែងទំនិញ ក្តារបញ្ជីមុខម្ហូប ទ្វារបន្ទប់ខាងក្នុង ខោនធ័រភេសជ្ជៈ ខោនធ័រម្ហូបអាហារ ខោនធ័រគិតលុយ តំបន់ POS ទូសម្ភារៈ ធុងបារី ធ្នើរស្រា និងជ្រុងផ្សេងទៀតរបស់ហាង។ សូមមើលតារាងលេខ៥",max:30,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
+  {no:26,desc:"ភាពស្អាតតំបន់ខាងក្រោយហាង (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ តំបន់បន្ទប់ខាងក្រោយត្រូវស្អាត១០០% រួមមាន៖ ចង្ក្រានលាងគ្រឿងបរិក្ខារ ចង្ក្រានលាងម៉ុប ក្បឿងជាន់ ធ្នើរ/ទូសម្ភារៈប្រើប្រាស់ ជញ្ជាំង/ជើងសសរ ដំបូល/ពិដាន ប្រអប់ផ្ទុកទំនិញខូចខាត តំបន់ធុងទឹក តំបន់វ៉ុល ស្ថានភាពគ្រប់គ្រងសត្វល្អិត និងជ្រុងផ្សេងទៀត។ សូមមើលតារាងលេខ៥",max:15,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
+  {no:27,desc:"ភាពស្អាតគ្រឿងបរិក្ខារភេសជ្ជៈ (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ គ្រឿងបរិក្ខារភេសជ្ជៈត្រូវស្អាត១០០% រួមមាន៖\nគ្រឿងបរិក្ខារខោនធ័រភេសជ្ជៈ៖ Jet Spray ម៉ាស៊ីនស្លាស់ស៊ី ម៉ាស៊ីនចាក់កូកាកូឡា\nម៉ាស៊ីន Post Mix ប្រព័ន្ធ BIB ម៉ាស៊ីនធ្វើទឹកកក\nម៉ាស៊ីនភេសជ្ជៈក្តៅ៖ ស្ថានីយ៍ ON Café ម៉ាស៊ីនកាហ្វេ ម៉ាស៊ីនកិន ប្រអប់ទឹកកក ធុងអ៊ីណុក\nគ្រឿងបរិក្ខារផ្សេងទៀត៖ ទូវ៉ុល ទូទឹកកក ទូការ៉េមទឹកកក ម៉ាស៊ីនធ្វើទឹកកក\nសូមមើលតារាងលេខ៥",max:20,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
+  {no:28,desc:"ភាពស្អាតគ្រឿងបរិក្ខារចំណីអាហារ (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ គ្រឿងបរិក្ខារចំណីអាហារត្រូវស្អាត១០០% រួមមាន៖ ទូរៀបចំ ម៉ាស៊ីនចំហុយ ឡ ម៉ាស៊ីនកម្តៅរលក គ្រឿងបរិក្ខារសាំងវិច ថាស កាំបិត ទូកម្តៅចំណីអាហារ ដង្កៀប គ្រឿងបរិក្ខារចែកបុន និងធុងសម្ភារៈប្រើប្រាស់។ សូមមើលតារាងលេខ៥",max:20,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
+  {no:29,desc:"ភាពស្អាតតំបន់ម្ហូបលឿន/តាំងបង្ហាញ (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ គ្រឿងបរិក្ខារ និងធ្នើរទាំងអស់ត្រូវស្អាត១០០% រួមមាន៖\n-ធ្នើរផលិតផលមិនមែនចំណីអាហារ\n-ធ្នើរចំណីអាហារកែច្នៃ\n-ធ្នើរនំបុ័ង\n-តំបន់តាំងបង្ហាញផលិតផល\n-ស្លាកតម្លៃ\nគ្រឿងបរិក្ខារត្រជាក់រួមមាន៖ ទូទឹកកក Sanyo ទូទឹកកក Traflo និងទូបើកចំហ។ សូមមើលតារាងលេខ៥",max:20,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
+  {no:30,desc:"អនាម័យឧបករណ៍ និងសារធាតុគីមីសម្អាត (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ ឧបករណ៍សម្អាតត្រូវថែទាំឱ្យបានត្រឹមត្រូវ រួមមាន៖\n-ត្រូវប្រើសញ្ញា \"ប្រយ័ត្នរអិល\" (Wet floor sign) ពេលសម្អាត\n-កន្ទបសម្អាតជាន់មិនត្រូវពណ៌ខ្មៅ ឬមានក្លិនស្អុយ\n-កន្សែងសម្រាប់ដៃ ឬគ្រឿងបរិក្ខារមិនត្រូវរហែក ឬកខ្វក់\n-សារធាតុគីមីសម្អាតត្រូវមានគ្រប់គ្រាន់ និងប្រើប្រាស់ត្រឹមត្រូវ\nសូមមើលតារាងលេខ៥",max:10,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
+  {no:31,desc:"អនាម័យទូ/កន្លែងផ្ទុកគ្រឿងបរិក្ខារផ្នែកស្តុក (ទម្ងន់ពិន្ទុគុណនឹង៣)",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ ទូផ្ទុកគ្រឿងបរិក្ខារត្រូវស្អាត និងរៀបចំបានត្រឹមត្រូវ១០០% រួមមាន៖\n-មិនត្រូវផ្ទុកគ្រឿងបរិក្ខារកខ្វក់ក្នុងទូ\n-គ្រឿងបរិក្ខារត្រូវផ្ទុកបញ្ច្រាស ឬដាក់ត្រឹមត្រូវ\n-មិនត្រូវផ្ទុកវត្ថុមិនពាក់ព័ន្ធក្នុងទូគ្រឿងបរិក្ខារ\nសូមមើលតារាងលេខ៥",max:10,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
   {no:32,desc:"អនាម័យផ្ទាល់ខ្លួនរបស់បុគ្គលិក (ទម្ងន់ពិន្ទុគុណនឹង៣) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ បុគ្គលិកត្រូវរក្សាអនាម័យផ្ទាល់ខ្លួន១០០% រួមមាន៖\n-សក់ មុខ ត្រចៀក ដៃ ក្រចក ស្អាត ការគ្រប់គ្រងក្លិនខ្លួន និងខ្យល់ដកដង្ហើមស្រស់\n-ការលាងដៃចាំបាច់ត្រូវធ្វើមុនពេលប៉ះពាល់ផលិតផលចំណីអាហារ\nសូមមើលតារាងលេខ៦ ស្តីពីអនាម័យ និងសម្អាតរូបរាងផ្ទាល់ខ្លួន",max:15,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
  ]},
- {key:"OPCOMP",title:"OPC — ការអនុលោមប្រតិបត្តិការ",startRow:55,subtotalRow:58,items:[
+ {key:"OPCOMP",title:"OPC — ការអនុលោមប្រតិបត្តិការ (Communication & Management · ការទំនាក់ទំនង និងការគ្រប់គ្រង)",startRow:55,subtotalRow:58,items:[
   {no:33,desc:"សៀវភៅកំណត់ហេតុហាង៖ កត់ត្រារាល់ថ្ងៃ ពេញលេញ និងចុះហត្ថលេខា (ទម្ងន់ពិន្ទុគុណនឹង២) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"កិច្ចប្រជុំវេនត្រូវកត់ត្រាឱ្យបានត្រឹមត្រូវក្នុងសៀវភៅកំណត់ហេតុហាង កំណត់ត្រាត្រូវរួមមាន៖\n-ការរាយការណ៍អំពីបញ្ហាប្រតិបត្តិការ ឬឧប្បត្តិហេតុ\n-ការទំនាក់ទំនងគោលដៅលក់ និងយុទ្ធសាស្ត្រលក់\n-ការពិភាក្សាប្រធានបទកែលម្អសេវាកម្មយ៉ាងតិច ២ប្រធានបទ\n-កត់ត្រាពេលវេលាកិច្ចប្រជុំ និងហត្ថលេខាបុគ្គលិកបញ្ជាក់ការចូលរួម sale target",max:10,scale:["៣ករណី", "-", "-", "១-២ករណី", "-", "មិនជួប"]},
   {no:34,desc:"កាលវិភាគការងាររាល់សប្តាហ៍៖ បិទផ្សាយ អនុម័ត និងត្រូវនឹងចំនួនបុគ្គលិកជាក់ស្តែង (លក្ខខណ្ឌមួយណាដែលធ្វើឱ្យលទ្ធផលត្រួតពិនិត្យទាំងមូលធ្លាក់) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC។ ហាងត្រូវអនុលោមតាមស្តង់ដារត្រួតពិនិត្យឱ្យបានពេញលេញ (១០០%)។ កាលវិភាគការងាររាល់សប្តាហ៍ត្រូវរៀបចំ និងបិទផ្សាយក្នុងហាងរាល់ថ្ងៃសុក្រសម្រាប់សប្តាហ៍បន្ទាប់។ កាលវិភាគត្រូវមាន និងបិទផ្សាយឱ្យបានត្រឹមត្រូវនៅសាខាហាង។",max:5,scale:["១ករណី", "-", "-", "-", "-", "មិនជួប"]},
   {no:35,desc:"ភាពត្រៀមខ្លួនសម្រាប់ការត្រួតពិនិត្យ៖ កំណត់ត្រាពេញលេញ និងរៀបចំបានត្រឹមត្រូវ (ទម្ងន់ពិន្ទុគុណនឹង៥) ដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV",standard:"ការត្រួតពិនិត្យដោយចៃដន្យធ្វើឡើងដោយ QC តាមរយៈការសង្កេតដោយផ្ទាល់ និង CCTV។ ហាងត្រូវអនុលោមតាមស្តង់ដារត្រួតពិនិត្យឱ្យបានពេញលេញ (១០០%) ដោយគ្មានបញ្ហា ឬការល្មើសសំខាន់ៗ។\nសូមមើលតារាងលេខ៧ ស្តីពីការត្រួតពិនិត្យ និងការទប់ស្កាត់ការបាត់បង់",max:25,scale:["៥ករណី", "៤ករណី", "៣ករណី", "២ករណី", "១ករណី", "មិនជួប"]},
  ]},
 ];
-const STANDARDIZE = {title:"STANDARDIZE — ស្តង់ដារនីយកម្ម (ការអភិវឌ្ឍសមត្ថភាព) (G / I)",startRow:60,subtotalRow:70,items:[
+const STANDARDIZE = {title:"STANDARDIZE — ស្តង់ដារនីយកម្ម (Capability Development · ការអភិវឌ្ឍសមត្ថភាព) (G / I / F)",startRow:60,subtotalRow:70,items:[
   {no:1,desc:"ការវាយតម្លៃការគ្រប់គ្រងផលិតផល",standard:"ធ្វើតេស្តលើបុគ្គលិកអនុវត្តការគ្រប់គ្រងផលិតផល (Bake, Jet Spray, ON Café, Hot Food ជាដើម)",max:20},
   {no:2,desc:"ចំណេះដឹងអំពីផលិតផលថ្មី",standard:"ត្រួតពិនិត្យព័ត៌មានផលិតផលថ្មីចុងក្រោយ និងសុំឱ្យបុគ្គលិកបង្ហាញទីតាំងតម្រៀបផលិតផល",max:20},
   {no:3,desc:"គោលនយោបាយក្រុមហ៊ុន៖ អ្វីគួរធ្វើ និងមិនគួរធ្វើជាមួយអតិថិជន",standard:"បុគ្គលិកយល់ដឹងអំពីអាកប្បកិរិយាហាមឃាត់/តម្រូវឱ្យមានពេលបម្រើអតិថិជន",max:20},
@@ -817,7 +824,7 @@ function mcqVal(f,key){ return (f && f.mcq && f.mcq[key]) ? f.mcq[key] : ''; }
 function mcqNeeded(id,isStd){
   const r = state.ratings[id];
   if(r===undefined || r==='') return false;
-  return isStd ? (r==='I') : (Number(r) < 5);
+  return isStd ? (r==='I' || r==='F') : (Number(r) < 5);
 }
 
 function renderMcqBlock(id,isStd){
@@ -916,12 +923,40 @@ function saveCurrentInspection(){
     faults: getFaults().map(f=>({pillar:f.pillar,no:f.no,desc:f.desc,rating:f.rating,score:f.score,max:f.max,notes:f.notes,mcq:f.mcq||{},severity:f.severity,zeroTolerance:!!f.zeroTolerance})),
     savedAt: new Date().toISOString(),
   };
+  snapshot.photoItems = Object.keys(state.photos).filter(k => (state.photos[k]||[]).length);
   state.history.push(snapshot);
   persistHistory();
+  uploadPhotosFor(snapshot.id);
   renderHistory();
   clearDraft();
   showToast('សវនកម្មត្រូវបានរក្សាទុកក្នុងប្រវត្តិ');
 }
+/* Evidence photos are stored separately from the inspection record so the
+   record itself stays small. They are replaced wholesale on each save. */
+function uploadPhotosFor(inspectionId){
+  const list = [];
+  Object.keys(state.photos).forEach(itemId=>{
+    (state.photos[itemId]||[]).forEach(p=>{
+      list.push({itemId, name:p.name||'', dataUrl:p.dataUrl});
+    });
+  });
+  if(!list.length) return;
+  fetch('/api/photos', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({inspection_id: inspectionId, photos: list})
+  }).then(r=>r.json()).then(d=>{
+    if(d && d.ok) showToast('រក្សាទុករូបភាពភស្តុតាង ' + d.saved + ' សន្លឹក');
+  }).catch(()=>{ /* offline: the inspection itself is already saved */ });
+}
+
+/* Fetch the stored photos for a saved inspection, for the history exports. */
+function fetchPhotosFor(inspectionId){
+  return fetch('/api/photos?inspection_id=' + encodeURIComponent(inspectionId), {cache:'no-store'})
+    .then(r=>r.ok ? r.json() : null)
+    .then(d=>(d && d.ok) ? d.photos : [])
+    .catch(()=>[]);
+}
+
 function deleteHistoryEntry(id){
   state.history = state.history.filter(h=>h.id!==id);
   persistHistory();
@@ -971,7 +1006,9 @@ function applyStoreField(id){
 function scoreFor(item,id,isStd){
   if(isStd){
     const r = state.ratings[id];
-    return r==='G' ? item.max : 0;
+    if(r==='G') return item.max;
+    if(r==='F') return -5;
+    return 0;
   }
   const r = state.ratings[id];
   if(r===undefined || r===''||r===null) return 0;
@@ -988,7 +1025,7 @@ function renderItemRow(pillarKey,item,isStd){
   const score = scoreFor(item,id,isStd);
   const photos = state.photos[id]||[];
   const ratingOptionsFixed = isStd
-    ? `<option value="">—</option><option value="G" ${state.ratings[id]==='G'?'selected':''}>G — ល្អ</option><option value="I" ${state.ratings[id]==='I'?'selected':''}>I — មិនពេញលេញ</option>`
+    ? `<option value="">—</option><option value="G" ${state.ratings[id]==='G'?'selected':''}>G — ល្អ (${item.max})</option><option value="I" ${state.ratings[id]==='I'?'selected':''}>I — មិនពេញលេញ (0)</option><option value="F" ${state.ratings[id]==='F'?'selected':''}>F — បរាជ័យ (-5)</option>`
     : `<option value="">—</option>`+[0,1,2,3,4,5].map(n=>`<option value="${n}" ${String(state.ratings[id])===String(n)?'selected':''}>${n} — ${['ធ្លាក់','ខ្សោយណាស់','ខ្សោយ','មធ្យម','ល្អ','ពេញលេញ'][n]}</option>`).join('');
   return `
   <div class="item-row" data-id="${id}">
@@ -1052,7 +1089,7 @@ function applyItemFilter(){
     } else if(filter==='failed'){
       if(r===undefined || r==='') show = true;
       else if(r==='G') show = false;
-      else if(r==='I') show = true;
+      else if(r==='I' || r==='F') show = true;
       else show = Number(r) <= 3;
     }
     row.classList.toggle('is-hidden', !show);
@@ -1131,7 +1168,7 @@ function getFaults(){
         pillar:'STANDARDIZE', no:it.no, desc:it.desc,
         rating:r||'មិនទាន់វាយតម្លៃ', score, max:it.max,
         notes:state.notes[id]||'', mcq:mcqOf(id), photos:state.photos[id]||[],
-        severity: r==='I' ? 'warning' : 'critical'
+        severity: r==='I' ? 'warning' : 'critical'   // F and unrated both count as critical
       });
     }
   });
@@ -1356,19 +1393,46 @@ document.getElementById('fileInput').addEventListener('change', e=>{
   state.photos[id] = state.photos[id]||[];
   let remaining = files.length;
   files.forEach(f=>{
-    const reader = new FileReader();
-    reader.onload = ev=>{
-      state.photos[id].push({name:f.name, dataUrl:ev.target.result});
+    compressPhoto(f, dataUrl=>{
+      state.photos[id].push({name:f.name, dataUrl});
       remaining--;
       if(remaining===0){
         reRenderPillarsPreserveFocus();
+        scheduleDraftSave();
         showToast('បានបន្ថែមរូបភាពភស្តុតាង');
       }
-    };
-    reader.readAsDataURL(f);
+    });
   });
   e.target.value='';
 });
+/* Downscale an incoming photo to a size that can be stored and synced.
+   A 4000px phone photo becomes roughly 150–250 KB at 1400px / JPEG 0.72. */
+function compressPhoto(file, done){
+  const MAX = 1400, QUALITY = 0.72;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      let {width:w, height:h} = img;
+      if(Math.max(w,h) > MAX){
+        const k = MAX / Math.max(w,h);
+        w = Math.round(w*k); h = Math.round(h*k);
+      }
+      try{
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0,0,w,h);
+        ctx.drawImage(img, 0, 0, w, h);
+        done(c.toDataURL('image/jpeg', QUALITY));
+      }catch(e){ done(ev.target.result); }
+    };
+    img.onerror = () => done(ev.target.result);
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function reRenderPillarsPreserveFocus(){
   renderPillars();
   updateRing();
@@ -1639,6 +1703,21 @@ document.getElementById('btnExportXlsx').addEventListener('click', ()=>{
    EXPORT — PDF Report (Faults & Findings)
    ============================================================ */
 function imgFormat(dataUrl){ return dataUrl.indexOf('image/png')!==-1 ? 'PNG' : 'JPEG'; }
+
+/* The ON MART mark, loaded once and reused by the PDF and Word reports. */
+let LOGO_DATA_URL = null;
+(function preloadLogo(){
+  fetch('/logo.png').then(r=>r.blob()).then(b=>{
+    const fr = new FileReader();
+    fr.onload = () => { LOGO_DATA_URL = fr.result; };
+    fr.readAsDataURL(b);
+  }).catch(()=>{});
+})();
+function drawPdfLogo(doc, x, y, h){
+  if(!LOGO_DATA_URL) return 0;
+  try{ doc.addImage(LOGO_DATA_URL, 'PNG', x, y, h*1.13, h); return h*1.13; }
+  catch(e){ return 0; }
+}
 function exportPdfReport(){
   if(!window.jspdf){ showToast('ឧបករណ៍ PDF កំពុងផ្ទុក — សូមព្យាយាមម្តងទៀតបន្តិច'); return; }
   const { jsPDF } = window.jspdf;
@@ -1649,11 +1728,13 @@ function exportPdfReport(){
   const faults = getFaults();
   let y = 16;
 
+  const logoW = drawPdfLogo(doc, 14, y-9, 13);
+  const tx = logoW ? 14 + logoW + 5 : 14;
   doc.setFont(FONT,'bold'); doc.setFontSize(17);
   doc.setTextColor(18,21,27);
-  doc.text('របាយការណ៍ត្រួតពិនិត្យ QC', 14, y); y+=4;
+  doc.text('របាយការណ៍ត្រួតពិនិត្យ QC', tx, y); y+=4;
   doc.setFontSize(10); doc.setTextColor(90,90,90);
-  doc.text('ON MART — ការផ្ទៀងផ្ទាត់ និងសវនកម្មហាង', 14, y); y+=8;
+  doc.text('ON MART — ការផ្ទៀងផ្ទាត់ និងសវនកម្មហាង', tx, y); y+=8;
 
   doc.setFont(FONT,'normal'); doc.setFontSize(10); doc.setTextColor(30,30,30);
   doc.text(`ហាង: ${sanitizeKhmerPdfText(state.store.store)||'-'}     កាលបរិច្ឆេទ: ${state.store.date||'-'}     វេន: ${sanitizeKhmerPdfText(state.store.shift)||'-'}`, 14, y); y+=5.5;
@@ -1738,6 +1819,9 @@ document.getElementById('btnExportPdf').addEventListener('click', exportPdfRepor
 /* ============================================================
    EXPORT — Word Report (Faults & Findings)
    ============================================================ */
+function wordLogoHtml(){
+  return LOGO_DATA_URL ? `<p><img src="${LOGO_DATA_URL}" style="height:46px"></p>` : '';
+}
 function exportWordReport(){
   const t = computeTotals();
   const faults = getFaults();
@@ -1757,6 +1841,7 @@ function exportWordReport(){
   `;
   let html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
   <head><meta charset="utf-8"><title>របាយការណ៍ត្រួតពិនិត្យ QC</title><style>${styles}</style></head><body>`;
+  html += wordLogoHtml();
   html += `<h1>របាយការណ៍ត្រួតពិនិត្យ QC — ON MART</h1>`;
   html += `<div class="meta">
     ហាង: <b>${state.store.store||'—'}</b> &nbsp; កាលបរិច្ឆេទ: <b>${state.store.date||'—'}</b> &nbsp; វេន: <b>${state.store.shift||'—'}</b><br>
@@ -1896,7 +1981,7 @@ document.getElementById('btnExportHistoryXlsx').addEventListener('click', export
 /* ============================================================
    EXPORT — Word / PDF consolidated report BY STORE (all saved audits for that store)
    ============================================================ */
-function exportHistoryWordByStore(){
+async function exportHistoryWordByStore(){
   const rows = filteredHistory();
   if(rows.length===0){ showToast('គ្មានទិន្នន័យសម្រាប់ការនាំចេញ (សូមរក្សាទុកសវនកម្មជាមុនសិន ឬពិនិត្យតម្រងវិញ)'); return; }
   const storeGroups = {};
@@ -1920,8 +2005,8 @@ function exportHistoryWordByStore(){
   let html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
   <head><meta charset="utf-8"><title>របាយការណ៍ប្រវត្តិសវនកម្មតាមហាង</title><style>${styles}</style></head><body>`;
   html += storeNames.length>1
-    ? `<h1>របាយការណ៍ប្រវត្តិសវនកម្មចម្រុះហាង — ON MART</h1>`
-    : `<h1>របាយការណ៍ប្រវត្តិសវនកម្មតាមហាង — ON MART</h1>`;
+    ? wordLogoHtml() + `<h1>របាយការណ៍ប្រវត្តិសវនកម្មចម្រុះហាង — ON MART</h1>`
+    : wordLogoHtml() + `<h1>របាយការណ៍ប្រវត្តិសវនកម្មតាមហាង — ON MART</h1>`;
   html += `<div class="meta">ចំនួនហាង៖ <b>${storeNames.length}</b> &nbsp; ចំនួនសវនកម្មសរុប៖ <b>${rows.length}</b>${state.historyFilter.month?` &nbsp; ខែ៖ <b>${state.historyFilter.month}</b>`:''}</div>`;
 
   if(storeNames.length>1){
@@ -1965,6 +2050,19 @@ function exportHistoryWordByStore(){
       }
     });
   });
+  // evidence photos, pulled from the server for each inspection in range
+  showToast('កំពុងទាញរូបភាពភស្តុតាង…');
+  for(const name of storeNames){
+    for(const h of storeGroups[name]){
+      const photos = await fetchPhotosFor(h.id);
+      if(!photos.length) continue;
+      html += `<h2>រូបភាពភស្តុតាង — ${name} · ${h.date}</h2>`;
+      photos.forEach(p=>{
+        html += `<p><b>${p.item_id||''}</b><br><img style="max-width:420px;margin:6px 0;" src="${p.data_url}"></p>`;
+      });
+    }
+  }
+
   html += `</body></html>`;
 
   const blob = new Blob(['\ufeff', html], {type:'application/msword'});
@@ -1976,7 +2074,7 @@ function exportHistoryWordByStore(){
 }
 document.getElementById('btnExportHistoryWord').addEventListener('click', exportHistoryWordByStore);
 
-function exportHistoryPdfByStore(){
+async function exportHistoryPdfByStore(){
   if(!window.jspdf){ showToast('ឧបករណ៍ PDF កំពុងផ្ទុក — សូមព្យាយាមម្តងទៀតបន្តិច'); return; }
   const rows = filteredHistory();
   if(rows.length===0){ showToast('គ្មានទិន្នន័យសម្រាប់ការនាំចេញ (សូមរក្សាទុកសវនកម្មជាមុនសិន ឬពិនិត្យតម្រងវិញ)'); return; }
@@ -1991,10 +2089,12 @@ function exportHistoryPdfByStore(){
   const FONT = khmerFontReady ? 'NotoKhmer' : 'helvetica';
   let y = 16;
 
+  const hLogoW = drawPdfLogo(doc, 14, y-9, 13);
+  const htx = hLogoW ? 14 + hLogoW + 5 : 14;
   doc.setFont(FONT,'bold'); doc.setFontSize(17); doc.setTextColor(18,21,27);
-  doc.text(multi ? 'របាយការណ៍ប្រវត្តិសវនកម្មចម្រុះហាង' : 'របាយការណ៍ប្រវត្តិសវនកម្មតាមហាង', 14, y); y+=4;
+  doc.text(multi ? 'របាយការណ៍ប្រវត្តិសវនកម្មចម្រុះហាង' : 'របាយការណ៍ប្រវត្តិសវនកម្មតាមហាង', htx, y); y+=4;
   doc.setFontSize(10); doc.setTextColor(90,90,90);
-  doc.text(`ON MART — ${storeNames.length} ហាង, ${rows.length} សវនកម្ម`, 14, y); y+=8;
+  doc.text(`ON MART — ${storeNames.length} ហាង, ${rows.length} សវនកម្ម`, htx, y); y+=8;
   doc.setTextColor(0,0,0);
 
   if(multi){
@@ -2081,6 +2181,25 @@ function exportHistoryPdfByStore(){
       }
     });
   });
+
+  showToast('កំពុងទាញរូបភាពភស្តុតាង…');
+  for(const name of storeNames){
+    for(const h of storeGroups[name]){
+      const photos = await fetchPhotosFor(h.id);
+      if(!photos.length) continue;
+      doc.addPage();
+      doc.setFont(FONT,'bold'); doc.setFontSize(12); doc.setTextColor(20);
+      doc.text(sanitizeKhmerPdfText(`រូបភាពភស្តុតាង — ${name} · ${h.date}`), 14, 18);
+      let py = 24, px = 14;
+      photos.forEach((p,i)=>{
+        if(py > doc.internal.pageSize.getHeight() - 60){ doc.addPage(); py = 18; px = 14; }
+        doc.setFont(FONT,'normal'); doc.setFontSize(8); doc.setTextColor(90);
+        doc.text(sanitizeKhmerPdfText(p.item_id||''), px, py+4);
+        try{ doc.addImage(p.data_url, px, py+6, 80, 58); }catch(e){}
+        if(i % 2 === 0){ px = 104; } else { px = 14; py += 68; }
+      });
+    }
+  }
 
   const pageCount = doc.internal.getNumberOfPages();
   for(let i=1;i<=pageCount;i++){

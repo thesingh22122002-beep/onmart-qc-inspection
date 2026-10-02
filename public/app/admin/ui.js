@@ -14,7 +14,7 @@ export const T = {
   line: '#E2E8F0',
   text: '#0F172A',
   muted: '#64748B',
-  km: "'Khmer OS','Noto Sans Khmer','Khmer UI','Leelawadee UI',system-ui,-apple-system,Segoe UI,sans-serif"
+  km: "'ONMART Khmer','Khmer OS','Noto Sans Khmer','Khmer UI','Leelawadee UI',system-ui,-apple-system,Segoe UI,sans-serif"
 };
 
 export function Card({ children, style, pad = 20 }) {
