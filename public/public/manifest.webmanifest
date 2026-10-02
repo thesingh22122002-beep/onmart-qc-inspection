@@ -1,0 +1,17 @@
+{
+  "name": "ON MART QC — ប្រព័ន្ធត្រួតពិនិត្យគុណភាពហាង",
+  "short_name": "ON MART QC",
+  "description": "ប្រព័ន្ធត្រួតពិនិត្យគុណភាពហាង ON MART",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "km",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
