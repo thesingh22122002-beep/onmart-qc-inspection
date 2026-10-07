@@ -119,7 +119,27 @@ find the lists it does nothing rather than breaking the page.
 if you would rather paste it inline than load a file. Use one or the other,
 not both.)
 
-### What the bar does
+### Per-row Edit / Save / Delete
+
+Every row in both lists gets three small buttons:
+
+- **កែ (Edit)** — rows holding data start **locked**, so a stray keystroke
+  cannot quietly rename a store. Edit unlocks that one row.
+- **រក្សាទុក (Save)** — saves just that row to the server straight away,
+  without touching the rest of the list. Renaming a code is handled as a
+  rename, not as a new store, and a clash with an existing code is refused.
+- **លុប (Delete)** — asks for confirmation, then **deactivates** the record.
+  Old inspections that reference it keep working. A row that was never
+  saved is simply dropped locally with no server call.
+
+Each row shows its own inline status: *កំពុងរក្សាទុក…*, *✓ រក្សាទុករួច*,
+*⏳ ដាក់ស្នើរួច* for users whose changes need approval, or a red message if
+the server refused. A failed row save leaves that row's old value in place.
+
+Rows added with **+ បន្ថែមហាង** get their toolbar automatically, and start
+unlocked so you can type straight into them.
+
+### What the bottom bar does
 
 A fixed bar at the bottom of the Settings screen showing one of four states:
 

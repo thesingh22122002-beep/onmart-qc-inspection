@@ -1,12 +1,13 @@
 /* ==================================================================
-   ON MART QC — Settings page save bar
+   ON MART QC — Settings page: Save / Edit / Delete
    Loaded by ONE line added to public/qc.html before </body>:
 
        <script src="/qc-settings-save.js"></script>
 
-   Additive: reads the inputs already on the page and appends a save
-   bar. Replaces no function, overwrites no variable. If it cannot find
-   the lists it does nothing rather than breaking the page.
+   Additive: reads the inputs already on the page, adds a per-row
+   toolbar and a bottom save bar. Replaces no function, overwrites no
+   variable. If it cannot find the lists it does nothing rather than
+   breaking the page.
    ================================================================== */
 
 (function () {
@@ -261,6 +262,267 @@
   }
 
   /* ---------------------------------------------------------------- *
+   * Per-row toolbar: កែ (Edit) · រក្សាទុក (Save) · លុប (Delete)
+   *
+   * Rows that already hold data start locked, so a stray keystroke
+   * cannot quietly change a store name. Edit unlocks one row at a time.
+   * ---------------------------------------------------------------- */
+
+  function commonAncestor(a, b) {
+    var seen = [];
+    for (var n = a; n; n = n.parentElement) seen.push(n);
+    for (var m = b; m; m = m.parentElement) {
+      if (seen.indexOf(m) !== -1) return m;
+    }
+    return a.parentElement;
+  }
+
+  function miniBtn(label, bg, fg, border) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('data-qc-btn', '1');
+    b.textContent = label;
+    b.setAttribute('style', [
+      'padding:4px 10px', 'margin-left:4px', 'border-radius:7px',
+      'font-size:12px', 'font-family:inherit', 'cursor:pointer',
+      'white-space:nowrap',
+      'border:1px solid ' + border, 'background:' + bg, 'color:' + fg
+    ].join(';'));
+    return b;
+  }
+
+  function setLocked(row, locked) {
+    var ins = row.__qcInputs || [];
+    for (var i = 0; i < ins.length; i++) {
+      ins[i].readOnly = locked;
+      ins[i].style.background = locked ? '#f8fafc' : '';
+      ins[i].style.color = locked ? '#475569' : '';
+    }
+    row.__qcLocked = locked;
+    if (row.__qcEditBtn) {
+      row.__qcEditBtn.textContent = locked ? 'កែ' : 'កំពុងកែ';
+      row.__qcEditBtn.style.background = locked ? '#fff' : '#fef3c7';
+    }
+    if (row.__qcSaveBtn) {
+      row.__qcSaveBtn.style.opacity = locked ? '0.45' : '1';
+      row.__qcSaveBtn.style.cursor = locked ? 'not-allowed' : 'pointer';
+    }
+  }
+
+  function rowStatus(row, text, color) {
+    if (!row.__qcStatus) return;
+    row.__qcStatus.textContent = text || '';
+    row.__qcStatus.style.color = color || '#64748b';
+    if (text) {
+      clearTimeout(row.__qcStatusTimer);
+      row.__qcStatusTimer = setTimeout(function () {
+        if (row.__qcStatus) row.__qcStatus.textContent = '';
+      }, 4000);
+    }
+  }
+
+  function patch(payload) {
+    return fetch(API, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function (r) {
+      return r.json().then(function (j) { return { ok: r.ok, status: r.status, body: j }; });
+    });
+  }
+
+  function saveRow(row) {
+    if (row.__qcLocked || row.__qcBusy) return;
+    var ins = row.__qcInputs;
+    var payload;
+
+    if (row.__qcKind === 'store') {
+      payload = {
+        op: 'upsert', kind: 'store',
+        code: ins[0].value.trim(),
+        name: ins[1].value.trim(),
+        originalCode: row.__qcOriginal[0],
+        requestId: newRequestId()
+      };
+      if (!payload.code || !payload.name) {
+        rowStatus(row, 'ត្រូវការលេខកូដ និងឈ្មោះ', '#dc2626');
+        return;
+      }
+    } else {
+      payload = {
+        op: 'upsert', kind: 'inspector',
+        name: ins[0].value.trim(),
+        originalName: row.__qcOriginal[0],
+        requestId: newRequestId()
+      };
+      if (!payload.name) {
+        rowStatus(row, 'ត្រូវការឈ្មោះ', '#dc2626');
+        return;
+      }
+    }
+
+    row.__qcBusy = true;
+    rowStatus(row, 'កំពុងរក្សាទុក…', '#2563eb');
+
+    patch(payload).then(function (res) {
+      row.__qcBusy = false;
+      if (!res.ok) {
+        rowStatus(row, res.body.error || 'រក្សាទុកមិនបាន', '#dc2626');
+        if (res.body.field === 'code' && ins[0]) ins[0].style.border = '1.5px solid #dc2626';
+        if (res.body.field === 'name' && ins[1]) ins[1].style.border = '1.5px solid #dc2626';
+        return;
+      }
+      for (var i = 0; i < ins.length; i++) ins[i].style.border = '';
+      row.__qcOriginal = ins.map(function (el) { return el.value.trim(); });
+      setLocked(row, true);
+      rowStatus(row, res.body.queued ? '⏳ ដាក់ស្នើរួច' : '✓ រក្សាទុករួច',
+                res.body.queued ? '#b45309' : '#15803d');
+      state.baseline = signature(readLists());
+      markDirty();
+    }).catch(function (e) {
+      row.__qcBusy = false;
+      rowStatus(row, 'បណ្ដាញមានបញ្ហា — ទិន្នន័យចាស់នៅដដែល', '#dc2626');
+    });
+  }
+
+  function deleteRow(row) {
+    if (row.__qcBusy) return;
+    var ins = row.__qcInputs;
+    var label = row.__qcKind === 'store'
+      ? (row.__qcOriginal[0] || ins[0].value) + ' — ' + (row.__qcOriginal[1] || ins[1].value)
+      : (row.__qcOriginal[0] || ins[0].value);
+
+    var isNew = !row.__qcOriginal[0];
+    if (isNew) {                       // never saved — just drop it locally
+      clickTemplateRemove(row);
+      markDirty();
+      return;
+    }
+
+    if (!window.confirm(
+      'លុប "' + label + '" ចេញពីបញ្ជីមែនទេ?\n\n' +
+      'វានឹងត្រូវកំណត់ជាអសកម្ម មិនមែនលុបចោលទាំងស្រុងទេ។\n' +
+      'ទិន្នន័យត្រួតពិនិត្យចាស់ដែលយោងទៅវានៅតែរក្សាទុកដដែល។'
+    )) return;
+
+    row.__qcBusy = true;
+    rowStatus(row, 'កំពុងលុប…', '#2563eb');
+
+    var payload = row.__qcKind === 'store'
+      ? { op: 'delete', kind: 'store', originalCode: row.__qcOriginal[0], requestId: newRequestId() }
+      : { op: 'delete', kind: 'inspector', originalName: row.__qcOriginal[0], requestId: newRequestId() };
+
+    patch(payload).then(function (res) {
+      row.__qcBusy = false;
+      if (!res.ok) {
+        rowStatus(row, res.body.error || 'លុបមិនបាន', '#dc2626');
+        return;
+      }
+      if (res.body.queued) {
+        rowStatus(row, '⏳ ដាក់ស្នើសុំការអនុម័ត', '#b45309');
+        return;
+      }
+      clickTemplateRemove(row);
+      state.baseline = signature(readLists());
+      markDirty();
+    }).catch(function () {
+      row.__qcBusy = false;
+      rowStatus(row, 'បណ្ដាញមានបញ្ហា — គ្មានអ្វីត្រូវបានលុបទេ', '#dc2626');
+    });
+  }
+
+  /* Use the template's own ✕ so its internal list stays in step with
+     the DOM; fall back to removing the row if there is no such button. */
+  function clickTemplateRemove(row) {
+    var btns = row.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) {
+      if (!btns[i].getAttribute('data-qc-btn')) { btns[i].click(); break; }
+    }
+    // If the template did not remove the row itself, take it out directly
+    // so the screen never disagrees with what the server now holds.
+    setTimeout(function () {
+      if (row.parentElement) row.parentElement.removeChild(row);
+      state.baseline = signature(readLists());
+      markDirty();
+    }, 60);
+  }
+
+  /* The element that represents one row: the closest ancestor that still
+     holds only this row's inputs. Climbing any further would capture the
+     neighbouring rows as well. */
+  function rowFor(input, col, expected) {
+    var node = input;
+    while (node.parentElement && node.parentElement !== col) {
+      if (textInputs(node.parentElement).length > expected) break;
+      node = node.parentElement;
+    }
+    return node;
+  }
+
+  function decorateRow(row, kind, inputs) {
+    if (row.getAttribute('data-qc-row') === '1') return;
+    row.setAttribute('data-qc-row', '1');
+    row.__qcKind = kind;
+    row.__qcInputs = inputs;
+    row.__qcOriginal = inputs.map(function (el) { return el.value.trim(); });
+
+    var bar = document.createElement('span');
+    bar.setAttribute('data-qc-btn', '1');
+    bar.setAttribute('style', 'display:inline-flex;align-items:center;margin-left:6px;');
+
+    var edit = miniBtn('កែ', '#fff', '#334155', '#cbd5e1');
+    var save = miniBtn('រក្សាទុក', '#1d4ed8', '#fff', '#1d4ed8');
+    var del  = miniBtn('លុប', '#fff', '#b91c1c', '#fca5a5');
+
+    var status = document.createElement('span');
+    status.setAttribute('style', 'margin-left:8px;font-size:11.5px;white-space:nowrap;');
+
+    row.__qcEditBtn = edit;
+    row.__qcSaveBtn = save;
+    row.__qcStatus = status;
+
+    edit.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      setLocked(row, !row.__qcLocked);
+      if (!row.__qcLocked && inputs[0]) inputs[0].focus();
+    });
+    save.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      saveRow(row);
+    });
+    del.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      deleteRow(row);
+    });
+
+    bar.appendChild(edit);
+    bar.appendChild(save);
+    bar.appendChild(del);
+    bar.appendChild(status);
+    row.appendChild(bar);
+
+    // A row with existing data starts locked; a freshly added blank row
+    // is left open so the user can type straight into it.
+    setLocked(row, row.__qcOriginal.some(function (v) { return !!v; }));
+  }
+
+  function decorateRows() {
+    if (!state.canEdit) return;
+    var storeCol = findColumn('បញ្ជីហាង', 'អ្នកសវនកម្ម');
+    var inspCol  = findColumn('អ្នកសវនកម្ម', 'បញ្ជីហាង');
+
+    var si = textInputs(storeCol);
+    for (var i = 0; i + 1 < si.length; i += 2) {
+      decorateRow(commonAncestor(si[i], si[i + 1]), 'store', [si[i], si[i + 1]]);
+    }
+
+    var ii = textInputs(inspCol);
+    for (var j = 0; j < ii.length; j++) {
+      decorateRow(rowFor(ii[j], inspCol, 1), 'inspector', [ii[j]]);
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
    * Save
    * ---------------------------------------------------------------- */
 
@@ -398,9 +660,19 @@
         if (!j) return;
         state.canEdit = !!j.canEdit;
         state.canApprove = !!j.canApprove;
+        decorateRows();
         render();
       })
       .catch(function () { render(); });
+
+    // Rows added by "+ បន្ថែមហាង" get their toolbar too.
+    try {
+      var mo = new MutationObserver(function () {
+        clearTimeout(window.__qcDecorateTimer);
+        window.__qcDecorateTimer = setTimeout(decorateRows, 120);
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+    } catch (e) { /* older browsers simply get the initial pass */ }
 
     render();
     return true;
