@@ -647,11 +647,55 @@
       })
       .then(function () {
         decorateRows();
+        // Trim rows the server no longer has. Without this a record that
+        // was deleted elsewhere keeps its stale row on screen and looks
+        // as though the delete was undone.
+        return shrinkRows('store', srvStores.length)
+          .then(function () { return shrinkRows('inspector', srvInsp.length); });
+      })
+      .then(function () {
         resyncRows();
         state.baseline = signature(readLists());
         state.dirty = false;
         try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
       });
+  }
+
+  /* Remove surplus rows from the end, driving the template's own remove
+     button so its internal list stays in step. */
+  function shrinkRows(kind, want, guard) {
+    guard = guard || 0;
+    if (guard > 80) return Promise.resolve();          // never spin forever
+
+    var col = kind === 'store'
+      ? findColumn('បញ្ជីហាង', 'អ្នកសវនកម្ម')
+      : findColumn('អ្នកសវនកម្ម', 'បញ្ជីហាង');
+    if (!col) return Promise.resolve();
+
+    var per = kind === 'store' ? 2 : 1;
+    var ins = textInputs(col);
+    var have = Math.floor(ins.length / per);
+    if (have <= want) return Promise.resolve();
+
+    // Re-find the last row every pass: clicking the template's remove
+    // button re-renders the list, which invalidates any element captured
+    // beforehand. That is why removing them in one batch dropped only one.
+    var row = rowFor(ins[ins.length - 1], col, per);
+    var btns = row.querySelectorAll('button');
+    var clicked = false;
+    for (var b = 0; b < btns.length; b++) {
+      if (!btns[b].getAttribute('data-qc-btn')) { btns[b].click(); clicked = true; break; }
+    }
+    if (!clicked && row.parentElement) row.parentElement.removeChild(row);
+
+    return wait(90).then(function () {
+      // Guarantee progress even if the template ignored the click.
+      var left = Math.floor(textInputs(col).length / per);
+      if (left === have && row.parentElement) row.parentElement.removeChild(row);
+      return wait(40);
+    }).then(function () {
+      return shrinkRows(kind, want, guard + 1);
+    });
   }
 
   /* After the page has been refilled from the server, each row's "value
@@ -672,9 +716,13 @@
   /* Does what is on screen already match the server? */
   function matchesServer(srvStores, srvInsp) {
     var l = readLists();
-    if (l.stores.length < srvStores.length) return false;
+    // Count must match exactly. A page holding MORE rows than the server
+    // is out of date too — those extras are records deleted elsewhere.
+    var filled = l.stores.filter(function (s) { return s.code || s.name; });
+    if (filled.length !== srvStores.length) return false;
+    if (l.inspectors.length !== srvInsp.length) return false;
     for (var i = 0; i < srvStores.length; i++) {
-      var row = l.stores[i];
+      var row = filled[i];
       if (!row || row.code !== srvStores[i].code || row.name !== srvStores[i].name) return false;
     }
     for (var j = 0; j < srvInsp.length; j++) {
