@@ -36,7 +36,7 @@ async function readInspectors() {
 
 /* GET — current lists, plus what this user is allowed to do with them. */
 export async function GET(req) {
-  const user = await currentUser(req);
+  const user = await currentUser();
   if (!user) return json({ error: 'Not signed in' }, 401);
 
   let canEdit = false;

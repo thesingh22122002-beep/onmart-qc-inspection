@@ -167,12 +167,24 @@
       location.reload();
     });
 
+    var pull = document.createElement('button');
+    pull.type = 'button';
+    pull.setAttribute('style', [
+      'padding:9px 16px', 'border-radius:10px', 'border:1px solid #93c5fd',
+      'background:#eff6ff', 'color:#1e40af', 'font-size:13.5px',
+      'font-family:inherit', 'cursor:pointer'
+    ].join(';'));
+    pull.textContent = '⭳ ទាញពីម៉ាស៊ីនបម្រើ';
+    pull.title = 'បំពេញបញ្ជីឡើងវិញពីមូលដ្ឋានទិន្នន័យ';
+    pull.addEventListener('click', restoreFromServer);
+
     var left = document.createElement('div');
     left.setAttribute('style', 'flex:1;min-width:220px;');
     left.appendChild(status);
     left.appendChild(note);
 
     bar.appendChild(left);
+    bar.appendChild(pull);
     bar.appendChild(revert);
     bar.appendChild(btn);
     document.body.appendChild(bar);
@@ -217,9 +229,15 @@
     if (!bar) return;
 
     if (!state.canEdit) {
-      status.innerHTML = '<span style="color:#92400e">' +
-        'អ្នកមិនមានសិទ្ធិរក្សាទុកបញ្ជីនេះទេ — ការកែប្រែនៅក្នុងឧបករណ៍នេះប៉ុណ្ណោះ។</span>';
-      note.textContent = 'Read-only: changes stay on this device and are not shared.';
+      if (state.signedOut) {
+        status.innerHTML = '<span style="color:#b91c1c">' +
+          'សម័យប្រើប្រាស់បានផុតកំណត់ — សូមចូលប្រើម្ដងទៀត។</span>';
+        note.textContent = 'Signed out. Sign in again to save.';
+      } else {
+        status.innerHTML = '<span style="color:#92400e">' +
+          'អ្នកមិនមានសិទ្ធិរក្សាទុកបញ្ជីនេះទេ — ការកែប្រែនៅក្នុងឧបករណ៍នេះប៉ុណ្ណោះ។</span>';
+        note.textContent = 'Read-only: changes stay on this device and are not shared.';
+      }
       btn.disabled = true;
       btn.style.background = '#94a3b8';
       btn.style.cursor = 'not-allowed';
@@ -555,6 +573,104 @@
   }
 
   /* ---------------------------------------------------------------- *
+   * Restore from server.
+   *
+   * The template keeps its lists in this browser. Signing out, clearing
+   * site data or opening the app on a new device leaves the page empty
+   * even though the server still holds everything. This refills the page
+   * from the database.
+   * ---------------------------------------------------------------- */
+
+  function addButtonIn(col) {
+    if (!col) return null;
+    var btns = col.querySelectorAll('button');
+    for (var i = 0; i < btns.length; i++) {
+      if (btns[i].getAttribute('data-qc-btn')) continue;
+      var t = (btns[i].textContent || '').trim();
+      if (t.charAt(0) === '+' || t.indexOf('បន្ថែម') !== -1) return btns[i];
+    }
+    return null;
+  }
+
+  function setValue(el, v) {
+    el.readOnly = false;
+    el.value = v;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function wait(ms) {
+    return new Promise(function (r) { setTimeout(r, ms); });
+  }
+
+  function restoreFromServer() {
+    if (state.saving) return;
+    if (state.dirty && !window.confirm(
+      'អ្នកមានការកែប្រែដែលមិនទាន់រក្សាទុក។ ការទាញពីម៉ាស៊ីនបម្រើនឹងសរសេរជាន់លើវា។ បន្តទេ?'
+    )) return;
+
+    state.saving = true;
+    render();
+
+    fetch(API, { cache: 'no-store' })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .then(function (res) {
+        if (!res.ok) throw new Error(res.body.error || 'មិនអាចទាញទិន្នន័យបាន');
+        var srvStores = res.body.stores || [];
+        var srvInsp = res.body.inspectors || [];
+        if (srvStores.length === 0 && srvInsp.length === 0) {
+          throw new Error('ម៉ាស៊ីនបម្រើគ្មានទិន្នន័យទេ');
+        }
+
+        var storeCol = findColumn('បញ្ជីហាង', 'អ្នកសវនកម្ម');
+        var inspCol = findColumn('អ្នកសវនកម្ម', 'បញ្ជីហាង');
+        var addStore = addButtonIn(storeCol);
+        var addInsp = addButtonIn(inspCol);
+
+        // Grow each list until it has at least as many rows as the server.
+        function grow(btn, col, perRow, want) {
+          var have = Math.floor(textInputs(col).length / perRow);
+          if (!btn || have >= want) return Promise.resolve();
+          btn.click();
+          return wait(70).then(function () { return grow(btn, col, perRow, want); });
+        }
+
+        return grow(addStore, storeCol, 2, srvStores.length)
+          .then(function () { return grow(addInsp, inspCol, 1, srvInsp.length); })
+          .then(function () { return wait(140); })
+          .then(function () {
+            var si = textInputs(findColumn('បញ្ជីហាង', 'អ្នកសវនកម្ម'));
+            for (var i = 0; i < srvStores.length && (i * 2 + 1) < si.length; i++) {
+              setValue(si[i * 2], srvStores[i].code);
+              setValue(si[i * 2 + 1], srvStores[i].name);
+            }
+            var ii = textInputs(findColumn('អ្នកសវនកម្ម', 'បញ្ជីហាង'));
+            for (var j = 0; j < srvInsp.length && j < ii.length; j++) {
+              setValue(ii[j], srvInsp[j]);
+            }
+            return wait(160);
+          })
+          .then(function () {
+            decorateRows();
+            state.baseline = signature(readLists());
+            state.dirty = false;
+            try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+            state.saving = false;
+            render();
+            window.alert(
+              'បានទាញពីម៉ាស៊ីនបម្រើ៖\n' +
+              'ហាង ' + srvStores.length + ' · អ្នកសវនកម្ម ' + srvInsp.length
+            );
+          });
+      })
+      .catch(function (e) {
+        state.saving = false;
+        render();
+        window.alert('ទាញមិនបាន៖ ' + (e && e.message ? e.message : e));
+      });
+  }
+
+  /* ---------------------------------------------------------------- *
    * Save
    * ---------------------------------------------------------------- */
 
@@ -664,6 +780,26 @@
    * Start up
    * ---------------------------------------------------------------- */
 
+  /* Ask the server who we are and what we may do. A 401 means the session
+     has expired, which is a different problem from lacking permission, so
+     the two are reported differently. Re-checked periodically because a
+     session can expire while the page stays open. */
+  function refreshPermissions() {
+    return fetch(API, { cache: 'no-store' })
+      .then(function (r) {
+        state.signedOut = (r.status === 401);
+        return r.ok ? r.json() : null;
+      })
+      .then(function (j) {
+        var was = state.canEdit;
+        state.canEdit = !!(j && j.canEdit);
+        state.canApprove = !!(j && j.canApprove);
+        if (state.canEdit && !was) decorateRows();
+        render();
+      })
+      .catch(function () { render(); });
+  }
+
   function attach() {
     var lists = readLists();
     if (!lists.ok) return false;
@@ -686,16 +822,7 @@
       return '';
     });
 
-    fetch(API, { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) {
-        if (!j) return;
-        state.canEdit = !!j.canEdit;
-        state.canApprove = !!j.canApprove;
-        decorateRows();
-        render();
-      })
-      .catch(function () { render(); });
+    refreshPermissions();
 
     render();
     return true;
@@ -724,6 +851,8 @@
       mo.observe(document.body, { childList: true, subtree: true });
     } catch (e) { /* older browsers fall back to the interval below */ }
     setInterval(sweep, 1500);
+    // Pick up a sign-in that happened in another tab.
+    setInterval(function () { if (attached) refreshPermissions(); }, 20000);
   }
 
   if (document.readyState === 'loading') {

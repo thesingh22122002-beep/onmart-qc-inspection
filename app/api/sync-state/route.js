@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
  * poll costs one small row read rather than a full master-data reload.
  */
 export async function GET(req) {
-  const user = await currentUser(req);
+  const user = await currentUser();
   if (!user) return json({ error: 'Not signed in' }, 401);
 
   try {
