@@ -14,15 +14,25 @@ were baselined as version 1.
 ```
 lib/versioning.js
 lib/guard.js
+lib/records.js
 app/api/admin/masterdata/route.js
 app/api/admin/versions/route.js
 app/api/admin/approvals/route.js
 app/api/admin/refresh/route.js
+app/api/admin/drafts/route.js
+app/api/admin/records/route.js
+app/api/admin/records/[id]/route.js
+app/api/admin/records/[id]/history/route.js
+app/api/admin/records/[id]/action/route.js
 app/api/sync-state/route.js
 app/admin/refreshbar.js
 app/admin/masterdata.js
 app/admin/approvals.js
+app/admin/records.js
+app/admin/recordform.js
 ```
+
+The `[id]` folder name is literal — keep the square brackets.
 
 Keep the same folder paths. No existing file is overwritten.
 
@@ -36,7 +46,7 @@ Find the `MODULES` array and add the two new entries at the end:
 export const MODULES = [
   'dashboard', 'users', 'roles', 'content',
   'reports', 'audit', 'settings', 'inspections',
-  'masterdata', 'approvals',          // <-- add these two
+  'masterdata', 'approvals', 'records',   // <-- add these three
 ];
 ```
 
@@ -52,12 +62,14 @@ That is the only change to this file. `can()`, `permissionMap()`,
 ```js
 import MasterData from './masterdata.js';
 import Approvals from './approvals.js';
+import Records from './records.js';
 ```
 
 **b.** Add two entries to the sidebar nav list (the array that already holds
 `dashboard`, `users`, `roles`, …):
 
 ```js
+{ k: 'records',    label: 'ឯកសារគ្រប់គ្រង / Controlled Records', icon: '📘' },
 { k: 'masterdata', label: 'ទិន្នន័យមេ / Master Data', icon: '🗂' },
 { k: 'approvals',  label: 'ការអនុម័ត / Approvals',   icon: '✅' },
 ```
@@ -65,6 +77,7 @@ import Approvals from './approvals.js';
 **c.** Render them alongside the existing sections:
 
 ```jsx
+{section === 'records'    && <Records    allow={allow} toast={toast} />}
 {section === 'masterdata' && <MasterData allow={allow} toast={toast} />}
 {section === 'approvals'  && <Approvals  allow={allow} toast={toast} />}
 ```
@@ -94,6 +107,9 @@ Additive only — `CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`,
 | `record_versions` | One row per saved version. Old rows are marked `superseded`, never updated in place or removed. |
 | `change_requests` | Approval queue for changes submitted by Admin. |
 | `sync_state` | Revision counter plus the Last Updated / Updated By / status banner. |
+| `qc_records` | Controlled QA/QC documents — code, version, status, effective date, change reason. |
+| `record_drafts` | Private auto-saved drafts. Separate from the record, so autosave can never alter a live value. |
+| `save_receipts` | Request-ID receipts for duplicate-save protection. |
 
 **New columns** (all with safe defaults, existing rows unaffected)
 
@@ -108,12 +124,15 @@ Additive only — `CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`,
 **Roles** — `operation` added across all 10 modules; `masterdata` and
 `approvals` permissions added for `super_admin`, `admin` and `qc_officer`.
 
-| Role | Master data | Approvals |
-|---|---|---|
-| Super Admin | view, create, edit, delete, approve, export | full — approves and rejects |
-| Admin | view, create, edit, export — **changes go to the approval queue** | view and submit only |
-| QA/QC (`qc_officer`) | view only | none |
-| Operation (`operation`) | view only | none |
+| Role | Master data | Approvals | Controlled records |
+|---|---|---|---|
+| Super Admin | view, create, edit, delete, approve, export | full — approves and rejects | edit, approve, publish, archive |
+| Admin | view, create, edit, export — **changes go to the approval queue** | view and submit only | edit, save draft, submit |
+| QA/QC (`qc_officer`) | view only | none | edit and submit |
+| Operation (`operation`) | view only | none | view and create only |
+| Viewer (`viewer`) | view only | none | view only |
+
+The `viewer` role was added across all eleven modules.
 
 ---
 
@@ -145,6 +164,63 @@ It polls `/api/sync-state`, which returns only a revision counter, and does a
 full refresh only when the revision has moved or the interval has elapsed.
 Polling pauses while the tab is hidden. It also refreshes after every save
 and after every approval.
+
+---
+
+## Edit & Save architecture — where each rule lives
+
+| Your spec | Where it is enforced |
+|---|---|
+| §2 View / Edit / History per record | `app/admin/records.js` — three buttons per row |
+| §2 Load latest value, show version + status | `RecordForm.load()` re-fetches on open, never uses the list row |
+| §3 Read-only fields | `EDITABLE_FIELDS` in `lib/records.js`; `sanitizePayload()` drops everything else, so a crafted request cannot reach Record ID, Document Code or Created By |
+| §4 Unsaved-changes prompt | `beforeunload` for tab close, plus a Save / Discard / Cancel dialog on in-app close |
+| §5 Validation | `validate()` returns per-field messages; the form highlights each input in red |
+| §6 Confirm Update | mandatory dialog before every save of a controlled record |
+| §7 Change Reason + Category | required; the seven categories from your list |
+| §8 Version control | P1 → P2 → P3; the save writes the new version and snapshots the old one |
+| §10 Save status | Saving… / ✓ success panel with code, version, user, time, status / failure panel |
+| §11 Duplicate-save protection | button disabled while saving **and** a `request_id` receipt server-side, so a retry returns the first result instead of writing twice |
+| §12 Concurrent editing | `where version = baseVersion` — a stale save writes nothing and returns 409 with Reload Latest / Compare Changes / Cancel |
+| §13 Auto-save draft | every 45s into `record_drafts`, private to the editor, never published |
+| §14 Save & Continue | separate from Save & Close |
+| §15 Save Draft vs Submit vs Publish | separate buttons, separate permissions — an Admin who can edit cannot approve |
+| §16 Audit trail | `record_versions` + your existing `audit_logs`; both read-only, no update or delete path exists |
+| §17 Change comparison | `diffRecords()` tags each field Added / Changed / Removed |
+| §18 Cancel | returns to View when clean, prompts when dirty |
+| §19 Delete | there is no delete — only Archive, which sets `status = 'archived'` |
+| §20 Refresh after save | the form reloads and the parent list refreshes; the revision bumps so other screens notice |
+| §21 API shape | `GET/POST /records`, `GET/PUT/PATCH /records/{id}`, `/records/{id}/history`, `/records/{id}/action` for submit, approve, reject, publish, archive, new-version |
+| §22 Database shape | `qc_records` for the current record, `record_versions` for history — the two-table split you recommended |
+| §23 Permissions | the five roles, per module × action |
+| §24 Button structure | View / Edit / History, then Save & Continue / Save Changes / Submit for Approval / Cancel; published records show Create New Version instead of Edit |
+
+### Lifecycle
+
+```
+draft ──submit──> pending_approval ──approve──> approved ──publish──> published
+  ^                      │                                               │
+  └────── reject ────────┘                                      new-version
+                                                                        │
+                                                                        v
+                                                                      draft (P+1)
+any state ──archive──> archived        (archived is never deleted)
+```
+
+A published document cannot be edited directly — the form disables the
+fields and offers **Create New Version**, which opens P(n+1) as a draft
+while the published P(n) stays untouched in history.
+
+### What I tested against your live database
+
+- Saving with the current version bumps P1 → P2 and writes the new value.
+- Saving with a **stale** version writes nothing: the update matched zero
+  rows and the stored value stayed at the newer one. That is Admin B being
+  stopped from overwriting Admin A, verified rather than assumed.
+- Duplicate document codes are caught case-insensitively.
+- The draft and receipt tables accept and de-duplicate correctly.
+- All test rows were removed afterwards; your 10 stores, 6 users, 9
+  inspections and 25 baseline versions are untouched.
 
 ---
 
