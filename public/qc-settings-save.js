@@ -551,6 +551,18 @@
     bar.appendChild(status);
     row.appendChild(bar);
 
+    // The template's own ✕ removes the row on this device only, which
+    // looks like a delete but is undone by the next page load. Hide it so
+    // there is one delete, the one that reaches the database. It is only
+    // hidden, not removed, so the delete below can still drive it.
+    var btns = row.querySelectorAll('button');
+    for (var b = 0; b < btns.length; b++) {
+      if (!btns[b].getAttribute('data-qc-btn')) {
+        btns[b].style.display = 'none';
+        btns[b].setAttribute('data-qc-hidden', '1');
+      }
+    }
+
     // A row with existing data starts locked; a freshly added blank row
     // is left open so the user can type straight into it.
     setLocked(row, row.__qcOriginal.some(function (v) { return !!v; }));
@@ -603,6 +615,102 @@
     return new Promise(function (r) { setTimeout(r, ms); });
   }
 
+  /* Write the server's lists onto the page, growing the lists first so
+     there is a row for every record. */
+  function applyServerLists(srvStores, srvInsp) {
+    var storeCol = findColumn('បញ្ជីហាង', 'អ្នកសវនកម្ម');
+    var inspCol = findColumn('អ្នកសវនកម្ម', 'បញ្ជីហាង');
+    var addStore = addButtonIn(storeCol);
+    var addInsp = addButtonIn(inspCol);
+
+    function grow(btn, col, perRow, want) {
+      var have = Math.floor(textInputs(col).length / perRow);
+      if (!btn || have >= want) return Promise.resolve();
+      btn.click();
+      return wait(70).then(function () { return grow(btn, col, perRow, want); });
+    }
+
+    return grow(addStore, storeCol, 2, srvStores.length)
+      .then(function () { return grow(addInsp, inspCol, 1, srvInsp.length); })
+      .then(function () { return wait(140); })
+      .then(function () {
+        var si = textInputs(findColumn('បញ្ជីហាង', 'អ្នកសវនកម្ម'));
+        for (var i = 0; i < srvStores.length && (i * 2 + 1) < si.length; i++) {
+          setValue(si[i * 2], srvStores[i].code);
+          setValue(si[i * 2 + 1], srvStores[i].name);
+        }
+        var ii = textInputs(findColumn('អ្នកសវនកម្ម', 'បញ្ជីហាង'));
+        for (var j = 0; j < srvInsp.length && j < ii.length; j++) {
+          setValue(ii[j], srvInsp[j]);
+        }
+        return wait(160);
+      })
+      .then(function () {
+        decorateRows();
+        resyncRows();
+        state.baseline = signature(readLists());
+        state.dirty = false;
+        try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+      });
+  }
+
+  /* After the page has been refilled from the server, each row's "value
+     before editing" must be re-read. Without this a row that arrived from
+     the server still carries the blank original it was decorated with, so
+     saving it would be treated as a new record rather than an update. */
+  function resyncRows() {
+    var rows = document.querySelectorAll('[data-qc-row="1"]');
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      if (!r.__qcInputs) continue;
+      r.__qcOriginal = r.__qcInputs.map(function (el) { return el.value.trim(); });
+      setLocked(r, r.__qcOriginal.some(function (v) { return !!v; }));
+      rowStatus(r, '', '');
+    }
+  }
+
+  /* Does what is on screen already match the server? */
+  function matchesServer(srvStores, srvInsp) {
+    var l = readLists();
+    if (l.stores.length < srvStores.length) return false;
+    for (var i = 0; i < srvStores.length; i++) {
+      var row = l.stores[i];
+      if (!row || row.code !== srvStores[i].code || row.name !== srvStores[i].name) return false;
+    }
+    for (var j = 0; j < srvInsp.length; j++) {
+      if (l.inspectors.indexOf(srvInsp[j]) === -1) return false;
+    }
+    return true;
+  }
+
+  /**
+   * On opening the page, make the screen agree with the database.
+   *
+   * The template keeps its lists in this browser, so a record saved on
+   * one device is invisible on another until the page is told about it.
+   * The server is the source of truth, so pull from it — but never over
+   * unsaved edits, and never from an empty server, which would blank a
+   * list that is actually fine.
+   */
+  function autoSync(srvStores, srvInsp) {
+    if (state.autoSynced || state.dirty || state.saving) return;
+    if (!srvStores || srvStores.length === 0) return;
+    if (matchesServer(srvStores, srvInsp || [])) { state.autoSynced = true; return; }
+
+    state.autoSynced = true;
+    applyServerLists(srvStores, srvInsp || []).then(function () {
+      render();
+      if (note) {
+        note.textContent = 'បានទាញពីម៉ាស៊ីនបម្រើ · ហាង ' + srvStores.length +
+                           ' · អ្នកសវនកម្ម ' + (srvInsp || []).length;
+      }
+    });
+  }
+
+  /* Still reachable from the console if a list ever needs forcing back:
+     qcSettingsRestore() */
+  try { window.qcSettingsRestore = function () { return restoreFromServer(); }; } catch (e) {}
+
   function restoreFromServer() {
     if (state.saving) return;
     if (state.dirty && !window.confirm(
@@ -621,47 +729,14 @@
         if (srvStores.length === 0 && srvInsp.length === 0) {
           throw new Error('ម៉ាស៊ីនបម្រើគ្មានទិន្នន័យទេ');
         }
-
-        var storeCol = findColumn('បញ្ជីហាង', 'អ្នកសវនកម្ម');
-        var inspCol = findColumn('អ្នកសវនកម្ម', 'បញ្ជីហាង');
-        var addStore = addButtonIn(storeCol);
-        var addInsp = addButtonIn(inspCol);
-
-        // Grow each list until it has at least as many rows as the server.
-        function grow(btn, col, perRow, want) {
-          var have = Math.floor(textInputs(col).length / perRow);
-          if (!btn || have >= want) return Promise.resolve();
-          btn.click();
-          return wait(70).then(function () { return grow(btn, col, perRow, want); });
-        }
-
-        return grow(addStore, storeCol, 2, srvStores.length)
-          .then(function () { return grow(addInsp, inspCol, 1, srvInsp.length); })
-          .then(function () { return wait(140); })
-          .then(function () {
-            var si = textInputs(findColumn('បញ្ជីហាង', 'អ្នកសវនកម្ម'));
-            for (var i = 0; i < srvStores.length && (i * 2 + 1) < si.length; i++) {
-              setValue(si[i * 2], srvStores[i].code);
-              setValue(si[i * 2 + 1], srvStores[i].name);
-            }
-            var ii = textInputs(findColumn('អ្នកសវនកម្ម', 'បញ្ជីហាង'));
-            for (var j = 0; j < srvInsp.length && j < ii.length; j++) {
-              setValue(ii[j], srvInsp[j]);
-            }
-            return wait(160);
-          })
-          .then(function () {
-            decorateRows();
-            state.baseline = signature(readLists());
-            state.dirty = false;
-            try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
-            state.saving = false;
-            render();
-            window.alert(
-              'បានទាញពីម៉ាស៊ីនបម្រើ៖\n' +
-              'ហាង ' + srvStores.length + ' · អ្នកសវនកម្ម ' + srvInsp.length
-            );
-          });
+        return applyServerLists(srvStores, srvInsp).then(function () {
+          state.saving = false;
+          render();
+          window.alert(
+            'បានទាញពីម៉ាស៊ីនបម្រើ៖\n' +
+            'ហាង ' + srvStores.length + ' · អ្នកសវនកម្ម ' + srvInsp.length
+          );
+        });
       })
       .catch(function (e) {
         state.saving = false;
@@ -796,15 +871,22 @@
         state.canApprove = !!(j && j.canApprove);
         if (state.canEdit && !was) decorateRows();
         render();
+        // The GET already carries the lists, so no second round trip.
+        if (j) autoSync(j.stores, j.inspectors);
       })
       .catch(function () { render(); });
   }
+
+  /* The bottom bar is switched off: saving happens per row, and the page
+     pulls from the server by itself, so a bulk Save/Reload strip added
+     nothing but clutter. Set this to true to bring it back. */
+  var SHOW_BOTTOM_BAR = false;
 
   function attach() {
     var lists = readLists();
     if (!lists.ok) return false;
 
-    buildBar();
+    if (SHOW_BOTTOM_BAR) buildBar();
     state.baseline = signature(lists);
 
     // Catch typing, row add and row delete alike.
