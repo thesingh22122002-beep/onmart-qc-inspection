@@ -1,0 +1,424 @@
+/* ==================================================================
+   ON MART QC — Settings page save bar
+   Loaded by ONE line added to public/qc.html before </body>:
+
+       <script src="/qc-settings-save.js"></script>
+
+   Additive: reads the inputs already on the page and appends a save
+   bar. Replaces no function, overwrites no variable. If it cannot find
+   the lists it does nothing rather than breaking the page.
+   ================================================================== */
+
+(function () {
+  'use strict';
+
+  var API      = '/api/settings-lists';
+  var DRAFT_KEY = 'qc_settings_draft_v1';
+  var state = {
+    saving: false,
+    dirty: false,
+    canEdit: false,
+    canApprove: false,
+    lastSavedAt: null,
+    lastSavedBy: null,
+    baseline: null,
+    requestId: null
+  };
+
+  /* ---------------------------------------------------------------- *
+   * Finding the two lists.
+   *
+   * We locate them by their visible Khmer labels rather than by class
+   * names or internal variables, so a future restyle of the template
+   * does not break saving.
+   * ---------------------------------------------------------------- */
+
+  function findColumn(labelText, otherLabel) {
+    var all = document.querySelectorAll('label, div, h3, h4, h5, span, strong, p, td, th');
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+
+      // A label is an element that holds text but no inputs of its own.
+      if (el.querySelectorAll('input').length > 0) continue;
+
+      var t = (el.textContent || '').trim();
+      if (t !== labelText && t.indexOf(labelText) !== 0) continue;
+      if (t.length > labelText.length + 40) continue;   // a wrapper, not the label
+
+      // Walk up to the nearest ancestor that actually holds inputs, but
+      // reject one that also contains the other column's label — that
+      // would be the two-column wrapper, not this column.
+      var node = el.parentElement;
+      for (var up = 0; node && up < 5; up++) {
+        if (node.querySelectorAll('input').length > 0) {
+          if (otherLabel && (node.textContent || '').indexOf(otherLabel) !== -1) break;
+          return node;
+        }
+        node = node.parentElement;
+      }
+    }
+    return null;
+  }
+
+  function textInputs(root) {
+    if (!root) return [];
+    var out = [];
+    var list = root.querySelectorAll('input');
+    for (var i = 0; i < list.length; i++) {
+      var el = list[i];
+      var type = (el.type || 'text').toLowerCase();
+      if (type === 'text' || type === 'search' || type === '') out.push(el);
+    }
+    return out;
+  }
+
+  function readLists() {
+    var storeCol = findColumn('បញ្ជីហាង', 'អ្នកសវនកម្ម');
+    var inspCol  = findColumn('អ្នកសវនកម្ម', 'បញ្ជីហាង');
+
+    var storeInputs = textInputs(storeCol);
+    var stores = [];
+    for (var i = 0; i + 1 < storeInputs.length; i += 2) {
+      stores.push({
+        code: storeInputs[i].value.trim(),
+        name: storeInputs[i + 1].value.trim(),
+        _els: [storeInputs[i], storeInputs[i + 1]]
+      });
+    }
+
+    var inspInputs = textInputs(inspCol);
+    var inspectors = [];
+    for (var j = 0; j < inspInputs.length; j++) {
+      var v = inspInputs[j].value.trim();
+      // Skip blanks and the "(បន្ថែមអ្នកសវនកម្ម)" placeholder row.
+      if (!v) continue;
+      if (v.charAt(0) === '(' && v.charAt(v.length - 1) === ')') continue;
+      inspectors.push(v);
+    }
+
+    return { stores: stores, inspectors: inspectors, ok: !!storeCol };
+  }
+
+  function signature(lists) {
+    var s = lists.stores.map(function (x) { return x.code + '\u0001' + x.name; }).join('\u0002');
+    return s + '\u0003' + lists.inspectors.join('\u0002');
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The bar
+   * ---------------------------------------------------------------- */
+
+  var bar, btn, status, note;
+
+  function buildBar() {
+    bar = document.createElement('div');
+    bar.id = 'qcSettingsSaveBar';
+    bar.setAttribute('style', [
+      'position:fixed', 'left:0', 'right:0', 'bottom:0', 'z-index:9000',
+      'display:flex', 'align-items:center', 'gap:14px', 'flex-wrap:wrap',
+      'padding:11px 18px', 'background:#ffffff',
+      'border-top:1px solid #e2e8f0',
+      'box-shadow:0 -4px 18px rgba(15,23,42,.10)',
+      'font-family:inherit', 'font-size:14px'
+    ].join(';'));
+
+    status = document.createElement('div');
+    status.setAttribute('style', 'flex:1;min-width:200px;line-height:1.5;');
+
+    note = document.createElement('div');
+    note.setAttribute('style', 'font-size:12.5px;color:#64748b;');
+
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('style', [
+      'padding:9px 22px', 'border-radius:10px', 'border:0',
+      'background:#1d4ed8', 'color:#fff', 'font-size:14px',
+      'font-family:inherit', 'cursor:pointer', 'font-weight:600'
+    ].join(';'));
+    btn.textContent = 'រក្សាទុក / Save';
+    btn.addEventListener('click', save);
+
+    var revert = document.createElement('button');
+    revert.type = 'button';
+    revert.setAttribute('style', [
+      'padding:9px 16px', 'border-radius:10px', 'border:1px solid #cbd5e1',
+      'background:#fff', 'color:#334155', 'font-size:13.5px',
+      'font-family:inherit', 'cursor:pointer'
+    ].join(';'));
+    revert.textContent = 'ផ្ទុកឡើងវិញ / Reload';
+    revert.addEventListener('click', function () {
+      if (state.dirty && !window.confirm(
+        'អ្នកមានការកែប្រែដែលមិនទាន់រក្សាទុក។ ផ្ទុកឡើងវិញនឹងបោះបង់ការកែប្រែទាំងនោះ។ បន្តទេ?'
+      )) return;
+      try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+      location.reload();
+    });
+
+    var left = document.createElement('div');
+    left.setAttribute('style', 'flex:1;min-width:220px;');
+    left.appendChild(status);
+    left.appendChild(note);
+
+    bar.appendChild(left);
+    bar.appendChild(revert);
+    bar.appendChild(btn);
+    document.body.appendChild(bar);
+
+    // Keep the bar from covering the last row of the form.
+    var spacer = document.createElement('div');
+    spacer.setAttribute('style', 'height:72px;');
+    document.body.appendChild(spacer);
+  }
+
+  function stamp(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    function p(n) { return (n < 10 ? '0' : '') + n; }
+    var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return p(d.getDate()) + '-' + m[d.getMonth()] + '-' + d.getFullYear() +
+           ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  function render() {
+    if (!bar) return;
+
+    if (!state.canEdit) {
+      status.innerHTML = '<span style="color:#92400e">' +
+        'អ្នកមិនមានសិទ្ធិរក្សាទុកបញ្ជីនេះទេ — ការកែប្រែនៅក្នុងឧបករណ៍នេះប៉ុណ្ណោះ។</span>';
+      note.textContent = 'Read-only: changes stay on this device and are not shared.';
+      btn.disabled = true;
+      btn.style.background = '#94a3b8';
+      btn.style.cursor = 'not-allowed';
+      return;
+    }
+
+    btn.disabled = state.saving || !state.dirty;
+    btn.style.background = btn.disabled ? '#94a3b8' : '#1d4ed8';
+    btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
+    btn.textContent = state.saving
+      ? 'កំពុងរក្សាទុក…'
+      : (state.canApprove ? 'រក្សាទុក / Save' : 'ដាក់ស្នើ / Submit');
+
+    if (state.saving) {
+      status.innerHTML = '<strong>កំពុងរក្សាទុកការកែប្រែ…</strong>';
+      note.textContent = 'Saving your changes…';
+    } else if (state.dirty) {
+      status.innerHTML = '<strong style="color:#b45309">' +
+        'មានការកែប្រែដែលមិនទាន់រក្សាទុក</strong>';
+      note.textContent = 'You have unsaved changes.';
+    } else if (state.lastSavedAt) {
+      status.innerHTML = '<strong style="color:#15803d">✓ បានរក្សាទុក</strong>';
+      note.textContent = 'Last Updated: ' + stamp(state.lastSavedAt) +
+        (state.lastSavedBy ? '  ·  Updated By: ' + state.lastSavedBy : '');
+    } else {
+      status.innerHTML = 'បញ្ជីត្រូវបានធ្វើសមកាលកម្មជាមួយម៉ាស៊ីនបម្រើ';
+      note.textContent = 'In sync with the server.';
+    }
+  }
+
+  function markDirty() {
+    var lists = readLists();
+    var sig = signature(lists);
+    state.dirty = state.baseline !== null && sig !== state.baseline;
+    if (state.dirty) {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+          stores: lists.stores.map(function (s) { return { code: s.code, name: s.name }; }),
+          inspectors: lists.inspectors,
+          at: new Date().toISOString()
+        }));
+      } catch (e) { /* storage may be unavailable */ }
+    }
+    render();
+  }
+
+  function clearRowErrors() {
+    var marked = document.querySelectorAll('[data-qc-row-error="1"]');
+    for (var i = 0; i < marked.length; i++) {
+      marked[i].style.border = '';
+      marked[i].style.background = '';
+      marked[i].removeAttribute('data-qc-row-error');
+    }
+  }
+
+  function flagRows(rows, lists) {
+    clearRowErrors();
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var entry = lists.stores[r.row];
+      if (!entry || !entry._els) continue;
+      var el = r.field === 'code' ? entry._els[0] : entry._els[1];
+      if (!el) continue;
+      el.style.border = '1.5px solid #dc2626';
+      el.style.background = '#fef2f2';
+      el.setAttribute('data-qc-row-error', '1');
+      if (i === 0 && el.scrollIntoView) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.focus();
+      }
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Save
+   * ---------------------------------------------------------------- */
+
+  function newRequestId() {
+    try {
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    } catch (e) {}
+    return 'rq-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+  }
+
+  function save() {
+    if (state.saving || !state.canEdit) return;        // duplicate-click guard
+    var lists = readLists();
+    if (!lists.ok) {
+      window.alert('រកមិនឃើញបញ្ជីហាងនៅលើទំព័រនេះទេ។');
+      return;
+    }
+
+    clearRowErrors();
+
+    // Refuse to send an empty list — that would deactivate every store.
+    var filled = lists.stores.filter(function (s) { return s.code || s.name; });
+    if (filled.length === 0) {
+      window.alert('បញ្ជីហាងទទេ។ ការរក្សាទុកត្រូវបានបញ្ឈប់ដើម្បីការពារទិន្នន័យដែលមានស្រាប់។');
+      return;
+    }
+
+    if (!state.requestId) state.requestId = newRequestId();
+    state.saving = true;
+    render();
+
+    fetch(API, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        stores: filled.map(function (s) { return { code: s.code, name: s.name }; }),
+        inspectors: lists.inspectors,
+        requestId: state.requestId
+      })
+    }).then(function (r) {
+      return r.json().then(function (j) { return { status: r.status, ok: r.ok, body: j }; });
+    }).then(function (res) {
+      state.saving = false;
+
+      if (res.status === 422 && res.body.rows) {
+        flagRows(res.body.rows, lists);
+        window.alert((res.body.error || 'Please correct the highlighted rows before saving.'));
+        render();
+        return;
+      }
+      if (res.status === 401) {
+        window.alert('សម័យប្រើប្រាស់បានផុតកំណត់។ សូមចូលម្តងទៀត។\nYour session expired. Please sign in again.');
+        render();
+        return;
+      }
+      if (res.status === 403) {
+        state.canEdit = false;
+        render();
+        return;
+      }
+      if (!res.ok) {
+        window.alert(
+          (res.body.messageKm || 'ការរក្សាទុកមិនបានសម្រេច។') + '\n' +
+          (res.body.message || 'Your previous data is still safe. No changes were applied.')
+        );
+        render();
+        return;
+      }
+
+      state.requestId = null;
+
+      if (res.body.queued) {
+        state.dirty = false;
+        state.baseline = signature(readLists());
+        try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+        window.alert('បានដាក់ស្នើសុំការអនុម័ត។\nSubmitted for approval.');
+        render();
+        return;
+      }
+
+      state.dirty = false;
+      state.baseline = signature(readLists());
+      state.lastSavedAt = res.body.savedAt;
+      state.lastSavedBy = res.body.savedBy;
+      try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+
+      var s = res.body.summary || {};
+      if (s.deactivated) {
+        window.alert(
+          'បានរក្សាទុក។\n' +
+          'ហាង ' + s.deactivated + ' ត្រូវបានដកចេញពីបញ្ជី ហើយកំណត់ជាអសកម្ម។\n' +
+          'ទិន្នន័យត្រួតពិនិត្យចាស់របស់ពួកវានៅតែរក្សាទុកដដែល។'
+        );
+      }
+      render();
+    }).catch(function (e) {
+      state.saving = false;
+      window.alert(
+        'ការរក្សាទុកមិនបានសម្រេច។ ទិន្នន័យមុនរបស់អ្នកនៅតែមានសុវត្ថិភាព។\n' +
+        'Save failed. Your previous data is still safe. ' + (e && e.message ? e.message : '')
+      );
+      render();
+    });
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Start up
+   * ---------------------------------------------------------------- */
+
+  function attach() {
+    var lists = readLists();
+    if (!lists.ok) return false;
+
+    buildBar();
+    state.baseline = signature(lists);
+
+    // Catch typing, row add and row delete alike.
+    document.addEventListener('input', function (e) {
+      if (e.target && e.target.tagName === 'INPUT') markDirty();
+    }, true);
+    document.addEventListener('click', function () {
+      setTimeout(markDirty, 60);
+    }, true);
+
+    window.addEventListener('beforeunload', function (e) {
+      if (!state.dirty) return undefined;
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    });
+
+    fetch(API, { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j) return;
+        state.canEdit = !!j.canEdit;
+        state.canApprove = !!j.canApprove;
+        render();
+      })
+      .catch(function () { render(); });
+
+    render();
+    return true;
+  }
+
+  function boot() {
+    if (attach()) return;
+    // The Settings panel may render later, or only once its tab is opened.
+    var tries = 0;
+    var timer = setInterval(function () {
+      tries++;
+      if (attach() || tries > 40) clearInterval(timer);
+    }, 500);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();

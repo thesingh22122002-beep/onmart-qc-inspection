@@ -26,7 +26,8 @@ app/api/admin/records/[id]/history/route.js
 app/api/admin/records/[id]/action/route.js
 app/api/settings-lists/route.js
 app/api/sync-state/route.js
-public/qc-settings-save.html          (paste into public/qc.html — see §5)
+public/qc-settings-save.js            (needs ONE line in qc.html — see §5)
+public/qc-settings-save.html          (same code, inline alternative)
 app/admin/refreshbar.js
 app/admin/masterdata.js
 app/admin/approvals.js
@@ -90,15 +91,33 @@ helper has a different name, pass whatever function takes
 
 ---
 
-## 5. Add the Save bar to the Settings page
+## 5. Add the Save bar to the Settings page  ← **easy to miss**
 
-Open `public/qc.html`, find `</body>` near the end, and paste the entire
-contents of **`public/qc-settings-save.html`** immediately before it.
+Copying `qc-settings-save.js` into `public/` is **not enough on its own**.
+A file sitting in `public/` is downloadable but never runs. The page has to
+ask for it.
 
-That is the only change to `qc.html`. The block is additive: it reads the
-inputs already on the page and appends a save bar. It replaces no function,
-overwrites no variable, and if it cannot find the lists it does nothing
-rather than breaking the page.
+Open `public/qc.html`, scroll to the very end, and add this **one line**
+immediately before `</body>`:
+
+```html
+<script src="/qc-settings-save.js"></script>
+```
+
+That is the only change to `qc.html` — one line, not a pasted block.
+
+To confirm it worked, open the Settings page and look at the bottom of the
+screen: a white bar reading *In sync with the server* should appear beneath
+the green sync pill. If it does not, open the browser console (F12) and
+check for a 404 on `/qc-settings-save.js`.
+
+The script is additive: it reads the inputs already on the page and appends
+a save bar. It replaces no function, overwrites no variable, and if it cannot
+find the lists it does nothing rather than breaking the page.
+
+(`public/qc-settings-save.html` is the same code wrapped in `<script>` tags,
+if you would rather paste it inline than load a file. Use one or the other,
+not both.)
 
 ### What the bar does
 
