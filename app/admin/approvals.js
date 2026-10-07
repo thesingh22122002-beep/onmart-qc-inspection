@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { T, Card, SectionTitle, Btn, Pill, Table, Td, Modal, Field, Input } from './ui.js';
+import { T, Card, SectionTitle, Btn, Pill, Table, Td, Modal, Field, Input, mkSay } from './compat.js';
 
 const STATUSES = [
   { k: 'pending', label: 'រង់ចាំ / Pending' },
@@ -43,6 +43,7 @@ function Diff({ before, after }) {
 }
 
 export default function Approvals({ allow, toast }) {
+  const say = mkSay(toast);
   const [status, setStatus] = useState('pending');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -58,9 +59,9 @@ export default function Approvals({ allow, toast }) {
       const r = await fetch(`/api/admin/approvals?status=${s}`, { cache: 'no-store' });
       const j = await r.json();
       setRows(r.ok ? (j.requests || []) : []);
-      if (!r.ok) toast?.(j.error || 'Load failed', 'danger');
+      if (!r.ok) say(j.error || 'Load failed', 'danger');
     } catch (e) {
-      toast?.('Load failed: ' + e.message, 'danger');
+      say('Load failed: ' + e.message, 'danger');
     } finally {
       setLoading(false);
     }
@@ -78,8 +79,8 @@ export default function Approvals({ allow, toast }) {
         body: JSON.stringify({ id: open.id, decision, note: note || null }),
       });
       const j = await r.json();
-      if (!r.ok) { toast?.(j.error || 'Failed', 'danger'); return; }
-      toast?.(
+      if (!r.ok) { say(j.error || 'Failed', 'danger'); return; }
+      say(
         decision === 'approve'
           ? `អនុម័ត និងអនុវត្តជាកំណែ v${j.version}`
           : 'បានបដិសេធសំណើ',
@@ -89,7 +90,7 @@ export default function Approvals({ allow, toast }) {
       setNote('');
       load(status);
     } catch (e) {
-      toast?.('Failed: ' + e.message, 'danger');
+      say('Failed: ' + e.message, 'danger');
     } finally {
       setBusy(false);
     }

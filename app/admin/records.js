@@ -1,8 +1,8 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { T, Card, SectionTitle, Btn, Field, Input, Select, Pill, Table, Td, Modal } from './ui.js';
-import RefreshBar from './refreshbar.js';
-import RecordForm from './recordform.js';
+import { T, Card, SectionTitle, Btn, Field, Input, Select, Pill, Table, Td, Modal, mkSay } from './compat.js';
+import RefreshBar from './refreshbar';
+import RecordForm from './recordform';
 
 const STATUSES = [
   { k: 'all', label: 'ទាំងអស់ / All' },
@@ -35,6 +35,7 @@ function when(iso) {
 }
 
 export default function Records({ allow, toast }) {
+  const say = mkSay(toast);
   const [status, setStatus] = useState('all');
   const [q, setQ] = useState('');
   const [rows, setRows] = useState([]);
@@ -55,9 +56,9 @@ export default function Records({ allow, toast }) {
       const r = await fetch(u, { cache: 'no-store' });
       const j = await r.json();
       setRows(r.ok ? (j.records || []) : []);
-      if (!r.ok) toast?.(j.error || 'Load failed', 'danger');
+      if (!r.ok) say(j.error || 'Load failed', 'danger');
     } catch (e) {
-      toast?.('Load failed: ' + e.message, 'danger');
+      say('Load failed: ' + e.message, 'danger');
     } finally {
       setLoading(false);
     }
@@ -72,10 +73,10 @@ export default function Records({ allow, toast }) {
     try {
       const r = await fetch(`/api/admin/records/${row.id}/history`, { cache: 'no-store' });
       const j = await r.json();
-      if (!r.ok) { toast?.(j.error || 'History unavailable', 'danger'); return; }
+      if (!r.ok) { say(j.error || 'History unavailable', 'danger'); return; }
       setHistory({ row, entries: j.history || [] });
     } catch (e) {
-      toast?.('History failed: ' + e.message, 'danger');
+      say('History failed: ' + e.message, 'danger');
     }
   }
 
@@ -101,15 +102,15 @@ export default function Records({ allow, toast }) {
       const j = await r.json();
       if (r.status === 422 || r.status === 409) {
         setErrors(j.fields || {});
-        toast?.(j.error || 'Please correct the highlighted fields before saving.', 'danger');
+        say(j.error || 'Please correct the highlighted fields before saving.', 'danger');
         return;
       }
-      if (!r.ok) { toast?.(j.message || j.error || 'Save failed', 'danger'); return; }
-      toast?.(`${j.recordCode} created as ${j.versionLabel} (Draft)`, 'good');
+      if (!r.ok) { say(j.message || j.error || 'Save failed', 'danger'); return; }
+      say(`${j.recordCode} created as ${j.versionLabel} (Draft)`, 'good');
       setCreating(null);
       load();
     } catch (e2) {
-      toast?.('Save failed: ' + e2.message, 'danger');
+      say('Save failed: ' + e2.message, 'danger');
     } finally {
       setSaving(false);
     }

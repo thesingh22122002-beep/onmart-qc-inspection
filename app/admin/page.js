@@ -7,6 +7,9 @@ import {
   fmtWhen, deviceOf, randomPassword
 } from './ui';
 import { exportExcel, exportPdf, exportWord } from './exporters';
+import Records from './records';
+import MasterData from './masterdata';
+import Approvals from './approvals';
 
 const NAV = [
   { key: 'dashboard', label: 'ផ្ទាំងគ្រប់គ្រង', icon: '▣' },
@@ -15,7 +18,10 @@ const NAV = [
   { key: 'content', label: 'មាតិកា', icon: '✎' },
   { key: 'reports', label: 'របាយការណ៍', icon: '▤' },
   { key: 'audit', label: 'កំណត់ហេតុសកម្មភាព', icon: '⌁' },
-  { key: 'settings', label: 'ការកំណត់', icon: '⚙' }
+  { key: 'settings', label: 'ការកំណត់', icon: '⚙' },
+  { key: 'records', label: 'ឯកសារគ្រប់គ្រង', icon: '▦' },
+  { key: 'masterdata', label: 'ទិន្នន័យមេ', icon: '▥' },
+  { key: 'approvals', label: 'ការអនុម័ត', icon: '✓' }
 ];
 
 const ROLE_LABEL = { super_admin: 'អ្នកគ្រប់គ្រងកំពូល', admin: 'អ្នកគ្រប់គ្រង', qc_officer: 'មន្ត្រី QC' };
@@ -80,7 +86,7 @@ export default function AdminPage() {
       {/* ---- top navigation ---- */}
       <header style={S.top}>
         <button style={S.burger} onClick={() => setNavOpen(o => !o)} aria-label="menu">☰</button>
-        <div style={S.logo}>OM</div>
+        <img src="/logo.png" alt="ON MART" style={S.logo} />
         <div style={{ minWidth: 0 }}>
           <div style={S.topTitle}>{company} — ផ្ទាំងគ្រប់គ្រងប្រព័ន្ធ</div>
           <div className="sm-hide" style={S.topSub}>{data.settings.company_tagline || 'ប្រព័ន្ធត្រួតពិនិត្យគុណភាពហាង'}</div>
@@ -119,6 +125,9 @@ export default function AdminPage() {
           {tab === 'reports' && <Reports allow={allow} toast={toast} company={company} />}
           {tab === 'audit' && <Audit allow={allow} toast={toast} />}
           {tab === 'settings' && <Settings data={data} allow={allow} reload={load} toast={toast} />}
+          {tab === 'records' && <Records allow={allow} toast={toast} />}
+          {tab === 'masterdata' && <MasterData allow={allow} toast={toast} />}
+          {tab === 'approvals' && <Approvals allow={allow} toast={toast} />}
         </main>
       </div>
 
@@ -1099,8 +1108,8 @@ const S = {
   },
   burger: { background: 'transparent', border: 0, color: '#fff', fontSize: 20, cursor: 'pointer', padding: '0 4px' },
   logo: {
-    width: 34, height: 34, borderRadius: 9, background: T.red, color: '#fff', display: 'flex',
-    alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flex: '0 0 auto'
+    height: 32, width: 'auto', maxWidth: 110, objectFit: 'contain',
+    background: '#fff', borderRadius: 7, padding: '3px 6px', flex: '0 0 auto'
   },
   topTitle: { fontSize: 14.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   topSub: { fontSize: 11, color: '#9BA2AF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },

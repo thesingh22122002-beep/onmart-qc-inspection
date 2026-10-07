@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { T, Card, SectionTitle, Btn, Field, Input, Select, Pill, Table, Td, Modal } from './ui.js';
-import RefreshBar from './refreshbar.js';
+import { T, Card, SectionTitle, Btn, Field, Input, Select, Pill, Table, Td, Modal, mkSay } from './compat.js';
+import RefreshBar from './refreshbar';
 
 const TABS = [
   { k: 'store', label: 'ហាង / Stores' },
@@ -30,6 +30,7 @@ function cell(row, key) {
 }
 
 export default function MasterData({ allow, toast }) {
+  const say = mkSay(toast);
   const [tab, setTab] = useState('store');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -47,9 +48,9 @@ export default function MasterData({ allow, toast }) {
       const r = await fetch(`/api/admin/masterdata?entity=${entity}`, { cache: 'no-store' });
       const j = await r.json();
       setRows(r.ok ? (j.rows || []) : []);
-      if (!r.ok) toast?.(j.error || 'Load failed', 'danger');
+      if (!r.ok) say(j.error || 'Load failed', 'danger');
     } catch (e) {
-      toast?.('Load failed: ' + e.message, 'danger');
+      say('Load failed: ' + e.message, 'danger');
     } finally {
       setLoading(false);
     }
@@ -73,16 +74,16 @@ export default function MasterData({ allow, toast }) {
         }),
       });
       const j = await r.json();
-      if (!r.ok) { toast?.(j.error || 'Save failed', 'danger'); return; }
+      if (!r.ok) { say(j.error || 'Save failed', 'danger'); return; }
       if (j.queued) {
-        toast?.('បានដាក់ស្នើសុំការអនុម័ត / Submitted for approval', 'warn');
+        say('បានដាក់ស្នើសុំការអនុម័ត / Submitted for approval', 'warn');
       } else {
-        toast?.(`រក្សាទុកជាកំណែ v${j.version} / Saved as version ${j.version}`, 'good');
+        say(`រក្សាទុកជាកំណែ v${j.version} / Saved as version ${j.version}`, 'good');
       }
       setEdit(null);
       load(tab);
     } catch (e) {
-      toast?.('Save failed: ' + e.message, 'danger');
+      say('Save failed: ' + e.message, 'danger');
     } finally {
       setSaving(false);
     }
@@ -92,10 +93,10 @@ export default function MasterData({ allow, toast }) {
     try {
       const r = await fetch(`/api/admin/versions?entity=${tab}&id=${encodeURIComponent(row.id)}`, { cache: 'no-store' });
       const j = await r.json();
-      if (!r.ok) { toast?.(j.error || 'History unavailable', 'danger'); return; }
+      if (!r.ok) { say(j.error || 'History unavailable', 'danger'); return; }
       setHistory({ entity: tab, id: row.id, label: row.name || row.title || row.key || row.id, versions: j.versions || [] });
     } catch (e) {
-      toast?.('History failed: ' + e.message, 'danger');
+      say('History failed: ' + e.message, 'danger');
     }
   }
 
@@ -108,12 +109,12 @@ export default function MasterData({ allow, toast }) {
         body: JSON.stringify({ entity: history.entity, id: history.id, version }),
       });
       const j = await r.json();
-      if (!r.ok) { toast?.(j.error || 'Restore failed', 'danger'); return; }
-      toast?.(`ស្ដារពីកំណែ v${version} ទៅជា v${j.newVersion}`, 'good');
+      if (!r.ok) { say(j.error || 'Restore failed', 'danger'); return; }
+      say(`ស្ដារពីកំណែ v${version} ទៅជា v${j.newVersion}`, 'good');
       setHistory(null);
       load(tab);
     } catch (e) {
-      toast?.('Restore failed: ' + e.message, 'danger');
+      say('Restore failed: ' + e.message, 'danger');
     }
   }
 

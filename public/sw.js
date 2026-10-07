@@ -1,8 +1,8 @@
 /* ON MART QC — service worker
    Network-first for the app shell so updates land immediately,
    cache fallback so the inspector can keep working with no signal. */
-const CACHE = 'onmart-qc-v1';
-const SHELL = ['/qc.html','/vendor/xlsx.full.min.js','/vendor/jszip.min.js','/vendor/jspdf.umd.min.js','/vendor/jspdf.plugin.autotable.min.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
+const CACHE = 'onmart-qc-v3';
+const SHELL = ['/qc.html','/vendor/xlsx.full.min.js','/vendor/jszip.min.js','/vendor/jspdf.umd.min.js','/vendor/jspdf.plugin.autotable.min.js', '/manifest.webmanifest','/icon-192.png','/icon-512.png','/apple-touch-icon.png','/logo.png','/NotoSansKhmer-Regular.woff2','/NotoSansKhmer-Bold.woff2'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()).catch(() => self.skipWaiting()));

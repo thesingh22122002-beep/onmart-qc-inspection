@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { T, Btn, Pill } from './ui.js';
+import { T, Btn, Pill } from './compat.js';
 
 const INTERVALS = [
   { v: 0, label: 'បិទ / Off' },

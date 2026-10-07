@@ -34,10 +34,21 @@
    * does not break saving.
    * ---------------------------------------------------------------- */
 
+  function visible(el) {
+    if (!el) return false;
+    var r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  }
+
   function findColumn(labelText, otherLabel) {
     var all = document.querySelectorAll('label, div, h3, h4, h5, span, strong, p, td, th');
     for (var i = 0; i < all.length; i++) {
       var el = all[i];
+
+      // The same wording appears on hidden panels elsewhere in the app
+      // (the inspection form has its own auditor field), so only consider
+      // labels that are actually on screen.
+      if (!visible(el)) continue;
 
       // A label is an element that holds text but no inputs of its own.
       if (el.querySelectorAll('input').length > 0) continue;
@@ -52,6 +63,7 @@
       var node = el.parentElement;
       for (var up = 0; node && up < 5; up++) {
         if (node.querySelectorAll('input').length > 0) {
+          if (!visible(node)) break;
           if (otherLabel && (node.textContent || '').indexOf(otherLabel) !== -1) break;
           return node;
         }
@@ -166,9 +178,29 @@
     document.body.appendChild(bar);
 
     // Keep the bar from covering the last row of the form.
-    var spacer = document.createElement('div');
+    spacer = document.createElement('div');
     spacer.setAttribute('style', 'height:72px;');
     document.body.appendChild(spacer);
+
+    positionBar();
+    window.addEventListener('resize', positionBar);
+    setInterval(positionBar, 2000);   // the sync pill appears and resizes
+  }
+
+  /* The template already has its own fixed sync bar at the bottom right.
+     Sit above it rather than underneath, or the Save button ends up
+     hidden behind it. */
+  var spacer;
+  function positionBar() {
+    if (!bar) return;
+    var other = document.getElementById('qcSyncBar');
+    var lift = 0;
+    if (other && visible(other)) {
+      var r = other.getBoundingClientRect();
+      if (r.bottom > window.innerHeight - 120) lift = Math.round(r.height) + 18;
+    }
+    bar.style.bottom = lift + 'px';
+    if (spacer) spacer.style.height = (bar.offsetHeight + lift + 14) + 'px';
   }
 
   function stamp(iso) {
@@ -665,27 +697,33 @@
       })
       .catch(function () { render(); });
 
-    // Rows added by "+ បន្ថែមហាង" get their toolbar too.
-    try {
-      var mo = new MutationObserver(function () {
-        clearTimeout(window.__qcDecorateTimer);
-        window.__qcDecorateTimer = setTimeout(decorateRows, 120);
-      });
-      mo.observe(document.body, { childList: true, subtree: true });
-    } catch (e) { /* older browsers simply get the initial pass */ }
-
     render();
     return true;
   }
 
+  /* The Settings panel is rendered only once its tab is opened, and rows
+     appear and disappear as the user works, so keep watching rather than
+     giving up after a fixed number of tries. */
+  var attached = false;
+  function sweep() {
+    if (!attached) {
+      attached = attach();
+    } else {
+      decorateRows();
+      positionBar();
+    }
+  }
+
   function boot() {
-    if (attach()) return;
-    // The Settings panel may render later, or only once its tab is opened.
-    var tries = 0;
-    var timer = setInterval(function () {
-      tries++;
-      if (attach() || tries > 40) clearInterval(timer);
-    }, 500);
+    sweep();
+    try {
+      var mo = new MutationObserver(function () {
+        clearTimeout(window.__qcSweepTimer);
+        window.__qcSweepTimer = setTimeout(sweep, 150);
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+    } catch (e) { /* older browsers fall back to the interval below */ }
+    setInterval(sweep, 1500);
   }
 
   if (document.readyState === 'loading') {

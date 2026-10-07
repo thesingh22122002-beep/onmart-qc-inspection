@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-const KM = "'Khmer OS','Noto Sans Khmer','Khmer UI','Leelawadee UI',system-ui,-apple-system,Segoe UI,sans-serif";
+const KM = "'ONMART Khmer','Khmer OS','Noto Sans Khmer','Khmer UI','Leelawadee UI',system-ui,-apple-system,Segoe UI,sans-serif";
 const LAST_EMAIL = 'qc_last_email';
 
 export default function AuthPage() {
@@ -90,7 +90,7 @@ export default function AuthPage() {
   return (
     <div style={S.wrap}>
       <form onSubmit={submit} style={S.card}>
-        <div style={S.logo}>OM</div>
+        <img src="/logo.png" alt="ON MART" style={S.logo} />
         <h1 style={S.h1}>ON MART</h1>
         <p style={S.sub}>ប្រព័ន្ធត្រួតពិនិត្យគុណភាពហាង (QC)</p>
 
@@ -167,9 +167,8 @@ const S = {
     boxShadow: '0 24px 60px rgba(0,0,0,.35)', display: 'flex', flexDirection: 'column'
   },
   logo: {
-    width: 58, height: 58, borderRadius: 14, background: '#dc2626', color: '#fff',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800,
-    fontSize: 22, letterSpacing: 1, alignSelf: 'center', marginBottom: 14
+    height: 54, width: 'auto', maxWidth: 190, objectFit: 'contain',
+    alignSelf: 'center', marginBottom: 16
   },
   h1: { margin: '0 0 2px', textAlign: 'center', fontSize: 24, color: '#0f172a', letterSpacing: 2 },
   sub: { margin: '0 0 18px', textAlign: 'center', fontSize: 14, color: '#64748b', lineHeight: 1.7 },

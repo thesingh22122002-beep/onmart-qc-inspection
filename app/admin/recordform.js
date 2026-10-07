@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { T, Card, Btn, Field, Input, Select, Textarea, Pill, Table, Td, Modal } from './ui.js';
+import { T, Card, Btn, Field, Input, Select, Textarea, Pill, Table, Td, Modal, mkSay } from './compat.js';
 
 /* ------------------------------------------------------------------ *
  * Edit & Save form for a controlled QA/QC record.
@@ -75,6 +75,7 @@ function ChangeTable({ changes }) {
 }
 
 export default function RecordForm({ recordId, mode, allow, toast, onClose, onSaved }) {
+  const say = mkSay(toast);
   const [record, setRecord] = useState(null);
   const [form, setForm] = useState({});
   const [baseVersion, setBaseVersion] = useState(null);
@@ -108,7 +109,7 @@ export default function RecordForm({ recordId, mode, allow, toast, onClose, onSa
     try {
       const r = await fetch(`/api/admin/records/${recordId}`, { cache: 'no-store' });
       const j = await r.json();
-      if (!r.ok) { toast?.(j.error || 'Load failed', 'danger'); onClose?.(); return; }
+      if (!r.ok) { say(j.error || 'Load failed', 'danger'); onClose?.(); return; }
       const rec = j.record;
       setRecord(rec);
       setBaseVersion(rec.version);
@@ -131,7 +132,7 @@ export default function RecordForm({ recordId, mode, allow, toast, onClose, onSa
         }
       } catch (_) { /* a missing draft is normal */ }
     } catch (e) {
-      toast?.('Load failed: ' + e.message, 'danger');
+      say('Load failed: ' + e.message, 'danger');
       onClose?.();
     } finally {
       setLoading(false);
@@ -212,7 +213,7 @@ export default function RecordForm({ recordId, mode, allow, toast, onClose, onSa
 
       if (r.status === 422) {
         setErrors(j.fields || {});
-        toast?.('Please correct the highlighted fields before saving.', 'danger');
+        say('Please correct the highlighted fields before saving.', 'danger');
         return;
       }
       if (r.status === 409 && j.conflict) {
@@ -265,11 +266,11 @@ export default function RecordForm({ recordId, mode, allow, toast, onClose, onSa
         body: JSON.stringify({ action, reason, category }),
       });
       const j = await r.json();
-      if (!r.ok) { toast?.(j.error || j.errorEn || 'Action failed', 'danger'); return; }
-      toast?.(`${j.recordCode} → ${STATUS_LABEL[j.status] || j.status}`, 'good');
+      if (!r.ok) { say(j.error || j.errorEn || 'Action failed', 'danger'); return; }
+      say(`${j.recordCode} → ${STATUS_LABEL[j.status] || j.status}`, 'good');
       if (reload) { await load(); onSaved?.(); }
     } catch (e) {
-      toast?.('Action failed: ' + e.message, 'danger');
+      say('Action failed: ' + e.message, 'danger');
     }
   }
 
@@ -283,7 +284,7 @@ export default function RecordForm({ recordId, mode, allow, toast, onClose, onSa
       const j = await r.json();
       setPreview(j.changes || []);
     } catch (e) {
-      toast?.('Compare failed: ' + e.message, 'danger');
+      say('Compare failed: ' + e.message, 'danger');
     }
   }
 
