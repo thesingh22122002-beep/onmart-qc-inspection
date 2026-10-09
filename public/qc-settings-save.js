@@ -40,14 +40,52 @@
     return r.width > 0 && r.height > 0;
   }
 
+  /* ---------------------------------------------------------------- *
+   * Scope everything to the Settings card.
+   *
+   * "អ្នកសវនកម្ម" also labels a field on the inspection form, so a
+   * document-wide search attached row toolbars to that form's fields.
+   * Everything below searches inside the ការកំណត់ card only, which both
+   * fixes that and keeps the scans small — the page is ~600KB, so a
+   * document-wide querySelectorAll on a timer is expensive.
+   * ---------------------------------------------------------------- */
+
+  var CARD_HEADING = 'បញ្ជីជម្រើស';
+  var cardCache = null;
+
+  function settingsCard() {
+    if (cardCache && document.contains(cardCache) && visible(cardCache)) return cardCache;
+    cardCache = null;
+
+    var heads = document.querySelectorAll('h1, h2, h3, h4, h5');
+    for (var i = 0; i < heads.length; i++) {
+      var h = heads[i];
+      if ((h.textContent || '').indexOf(CARD_HEADING) === -1) continue;
+      if (!visible(h)) continue;
+
+      // Climb to the card that holds both lists.
+      var node = h.parentElement;
+      for (var up = 0; node && up < 6; up++) {
+        var txt = node.textContent || '';
+        if (txt.indexOf('បញ្ជីហាង') !== -1 &&
+            txt.indexOf('អ្នកសវនកម្ម') !== -1 &&
+            node.querySelectorAll('input').length > 0) {
+          cardCache = node;
+          return cardCache;
+        }
+        node = node.parentElement;
+      }
+    }
+    return null;
+  }
+
   function findColumn(labelText, otherLabel) {
-    var all = document.querySelectorAll('label, div, h3, h4, h5, span, strong, p, td, th');
+    var card = settingsCard();
+    if (!card) return null;
+
+    var all = card.querySelectorAll('label, div, h3, h4, h5, span, strong, p, td, th');
     for (var i = 0; i < all.length; i++) {
       var el = all[i];
-
-      // The same wording appears on hidden panels elsewhere in the app
-      // (the inspection form has its own auditor field), so only consider
-      // labels that are actually on screen.
       if (!visible(el)) continue;
 
       // A label is an element that holds text but no inputs of its own.
@@ -59,9 +97,10 @@
 
       // Walk up to the nearest ancestor that actually holds inputs, but
       // reject one that also contains the other column's label — that
-      // would be the two-column wrapper, not this column.
+      // would be the two-column wrapper, not this column. Never climb
+      // past the card itself.
       var node = el.parentElement;
-      for (var up = 0; node && up < 5; up++) {
+      for (var up = 0; node && node !== card.parentElement && up < 5; up++) {
         if (node.querySelectorAll('input').length > 0) {
           if (!visible(node)) break;
           if (otherLabel && (node.textContent || '').indexOf(otherLabel) !== -1) break;
@@ -963,6 +1002,10 @@
      giving up after a fixed number of tries. */
   var attached = false;
   function sweep() {
+    // While the Settings card is not on screen there is nothing to do, and
+    // this is the common case: the user is on the inspection form. Bailing
+    // out here keeps the timer off the critical path.
+    if (!settingsCard()) return;
     if (!attached) {
       attached = attach();
     } else {
@@ -974,15 +1017,28 @@
   function boot() {
     sweep();
     try {
-      var mo = new MutationObserver(function () {
-        clearTimeout(window.__qcSweepTimer);
-        window.__qcSweepTimer = setTimeout(sweep, 150);
+      // React to DOM changes, but only those that could affect the
+      // Settings card, and never more than a few times a second.
+      var pending = false;
+      var mo = new MutationObserver(function (records) {
+        if (pending) return;
+        var relevant = false;
+        for (var i = 0; i < records.length && !relevant; i++) {
+          var t = records[i].target;
+          if (!t) continue;
+          if (cardCache && cardCache.contains && cardCache.contains(t)) relevant = true;
+          else if (!cardCache) relevant = true;      // card not found yet
+        }
+        if (!relevant) return;
+        pending = true;
+        setTimeout(function () { pending = false; sweep(); }, 250);
       });
       mo.observe(document.body, { childList: true, subtree: true });
     } catch (e) { /* older browsers fall back to the interval below */ }
-    setInterval(sweep, 1500);
+
+    setInterval(sweep, 3000);
     // Pick up a sign-in that happened in another tab.
-    setInterval(function () { if (attached) refreshPermissions(); }, 20000);
+    setInterval(function () { if (attached) refreshPermissions(); }, 30000);
   }
 
   if (document.readyState === 'loading') {
