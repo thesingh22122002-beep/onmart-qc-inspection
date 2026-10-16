@@ -25,17 +25,32 @@
     return r.width > 0 && r.height > 0;
   }
 
+  function kmText(el) {
+    if (!el) return '';
+    var out = '';
+    try {
+      var tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
+      var n;
+      while ((n = tw.nextNode())) {
+        out += (n.__qcKm !== undefined ? n.__qcKm : n.nodeValue);
+      }
+    } catch (e) {
+      out = el.textContent || '';
+    }
+    return out;
+  }
+
   /* The Settings card, found the same way the save script finds it, so
      the panel lands in the right place and nowhere else. */
   function settingsCard() {
     var heads = document.querySelectorAll('h1, h2, h3, h4, h5');
     for (var i = 0; i < heads.length; i++) {
       var h = heads[i];
-      if ((h.textContent || '').indexOf(CARD_HEADING) === -1) continue;
+      if (kmText(h).indexOf(CARD_HEADING) === -1) continue;
       if (!visible(h)) continue;
       var node = h.parentElement;
       for (var up = 0; node && up < 6; up++) {
-        var t = node.textContent || '';
+        var t = kmText(node);
         if (t.indexOf('បញ្ជីហាង') !== -1 && t.indexOf('អ្នកសវនកម្ម') !== -1 &&
             node.querySelectorAll('input').length > 0) {
           return node;

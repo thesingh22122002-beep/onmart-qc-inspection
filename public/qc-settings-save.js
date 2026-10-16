@@ -53,6 +53,25 @@
   var CARD_HEADING = 'បញ្ជីជម្រើស';
   var cardCache = null;
 
+  /* The language switch rewrites headings and labels in place, and this
+     script anchors on them. Read the Khmer original that the switch keeps
+     on each text node, so matching works in either language. */
+  function kmText(el) {
+    if (!el) return '';
+    if (el.nodeType === 3) return el.__qcKm !== undefined ? el.__qcKm : (el.nodeValue || '');
+    var out = '';
+    try {
+      var tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
+      var n;
+      while ((n = tw.nextNode())) {
+        out += (n.__qcKm !== undefined ? n.__qcKm : n.nodeValue);
+      }
+    } catch (e) {
+      out = el.textContent || '';
+    }
+    return out;
+  }
+
   function settingsCard() {
     if (cardCache && document.contains(cardCache) && visible(cardCache)) return cardCache;
     cardCache = null;
@@ -60,13 +79,13 @@
     var heads = document.querySelectorAll('h1, h2, h3, h4, h5');
     for (var i = 0; i < heads.length; i++) {
       var h = heads[i];
-      if ((h.textContent || '').indexOf(CARD_HEADING) === -1) continue;
+      if (kmText(h).indexOf(CARD_HEADING) === -1) continue;
       if (!visible(h)) continue;
 
       // Climb to the card that holds both lists.
       var node = h.parentElement;
       for (var up = 0; node && up < 6; up++) {
-        var txt = node.textContent || '';
+        var txt = kmText(node);
         if (txt.indexOf('បញ្ជីហាង') !== -1 &&
             txt.indexOf('អ្នកសវនកម្ម') !== -1 &&
             node.querySelectorAll('input').length > 0) {
@@ -91,7 +110,7 @@
       // A label is an element that holds text but no inputs of its own.
       if (el.querySelectorAll('input').length > 0) continue;
 
-      var t = (el.textContent || '').trim();
+      var t = kmText(el).trim();
       if (t !== labelText && t.indexOf(labelText) !== 0) continue;
       if (t.length > labelText.length + 40) continue;   // a wrapper, not the label
 
@@ -103,7 +122,7 @@
       for (var up = 0; node && node !== card.parentElement && up < 5; up++) {
         if (node.querySelectorAll('input').length > 0) {
           if (!visible(node)) break;
-          if (otherLabel && (node.textContent || '').indexOf(otherLabel) !== -1) break;
+          if (otherLabel && kmText(node).indexOf(otherLabel) !== -1) break;
           return node;
         }
         node = node.parentElement;
@@ -637,7 +656,7 @@
     var btns = col.querySelectorAll('button');
     for (var i = 0; i < btns.length; i++) {
       if (btns[i].getAttribute('data-qc-btn')) continue;
-      var t = (btns[i].textContent || '').trim();
+      var t = kmText(btns[i]).trim();
       if (t.charAt(0) === '+' || t.indexOf('បន្ថែម') !== -1) return btns[i];
     }
     return null;
