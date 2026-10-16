@@ -73,14 +73,13 @@
   }
 
   function settingsCard() {
-    if (cardCache && document.contains(cardCache) && visible(cardCache)) return cardCache;
+    if (cardCache && document.contains(cardCache)) return cardCache;
     cardCache = null;
 
     var heads = document.querySelectorAll('h1, h2, h3, h4, h5');
     for (var i = 0; i < heads.length; i++) {
       var h = heads[i];
       if (kmText(h).indexOf(CARD_HEADING) === -1) continue;
-      if (!visible(h)) continue;
 
       // Climb to the card that holds both lists.
       var node = h.parentElement;
@@ -105,7 +104,6 @@
     var all = card.querySelectorAll('label, div, h3, h4, h5, span, strong, p, td, th');
     for (var i = 0; i < all.length; i++) {
       var el = all[i];
-      if (!visible(el)) continue;
 
       // A label is an element that holds text but no inputs of its own.
       if (el.querySelectorAll('input').length > 0) continue;
@@ -121,7 +119,6 @@
       var node = el.parentElement;
       for (var up = 0; node && node !== card.parentElement && up < 5; up++) {
         if (node.querySelectorAll('input').length > 0) {
-          if (!visible(node)) break;
           if (otherLabel && kmText(node).indexOf(otherLabel) !== -1) break;
           return node;
         }
@@ -713,6 +710,7 @@
       })
       .then(function () {
         resyncRows();
+        rebuildDropdowns();
         state.baseline = signature(readLists());
         state.dirty = false;
         try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
@@ -798,6 +796,58 @@
    * unsaved edits, and never from an empty server, which would blank a
    * list that is actually fine.
    */
+  /* The template keeps its own copy of the lists and rebuilds the
+     inspection dropdowns from it. Writing into the Settings inputs
+     updates that copy but does not redraw the dropdowns, so ask the
+     template to redraw them itself. */
+  function rebuildDropdowns() {
+    try {
+      if (typeof window.renderStoreFields === 'function') window.renderStoreFields();
+    } catch (e) { /* never let a redraw break the sync */ }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Follow the Admin master data automatically.
+   *
+   * Every master-data change on the Admin side bumps a revision counter.
+   * Polling that counter is one small row, so the app can check often and
+   * only re-read the lists when something actually changed. Never while
+   * the user has unsaved edits in front of them.
+   * ---------------------------------------------------------------- */
+
+  var lastRevision = null;
+
+  function pullNow() {
+    if (state.dirty || state.saving) return;
+    fetch(API, { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || !j.stores || j.stores.length === 0) return;
+        if (matchesServer(j.stores, j.inspectors || [])) return;
+        return applyServerLists(j.stores, j.inspectors || []).then(function () {
+          render();
+          if (note) {
+            note.textContent = 'ធ្វើបច្ចុប្បន្នភាពពីទិន្នន័យមេ · ហាង ' + j.stores.length;
+          }
+        });
+      })
+      .catch(function () { /* a failed pull just waits for the next one */ });
+  }
+
+  function pollRevision() {
+    if (state.dirty || state.saving) return;
+    if (document.hidden) return;
+    fetch('/api/sync-state', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || j.revision === undefined) return;
+        var rev = Number(j.revision);
+        if (lastRevision === null) { lastRevision = rev; return; }
+        if (rev !== lastRevision) { lastRevision = rev; pullNow(); }
+      })
+      .catch(function () { /* offline: try again next tick */ });
+  }
+
   function autoSync(srvStores, srvInsp) {
     if (state.autoSynced || state.dirty || state.saving) return;
     if (!srvStores || srvStores.length === 0) return;
@@ -1058,6 +1108,14 @@
     setInterval(sweep, 3000);
     // Pick up a sign-in that happened in another tab.
     setInterval(function () { if (attached) refreshPermissions(); }, 30000);
+
+    // Follow Admin master data: check the revision counter regularly, and
+    // again whenever the tab is brought back to the front.
+    pollRevision();
+    setInterval(pollRevision, 20000);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) setTimeout(pollRevision, 400);
+    });
   }
 
   if (document.readyState === 'loading') {
