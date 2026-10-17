@@ -99,9 +99,16 @@
       '#qcPrintRoot .sum{font-weight:700;font-size:12px;margin:4px 0 10px;}' +
       '#qcPrintRoot .photo{page-break-inside:avoid;margin:0 0 14px;}' +
       '#qcPrintRoot .photo .cap{font-size:10px;color:#5a5a5a;margin-bottom:3px;}' +
-      '#qcPrintRoot .photo img{max-width:88mm;max-height:62mm;border:1px solid #d7dbe0;}' +
-      '#qcPrintRoot .grid{display:flex;flex-wrap:wrap;gap:10px;}' +
-      '#qcPrintRoot .grid .photo{width:88mm;}' +
+      /* One fixed frame for every photo. The picture is centred inside it at
+         a size worked out from its own proportions (see fitImages) rather
+         than with object-fit, which the canvas renderer used by the direct
+         download does not support. */
+      '#qcPrintRoot .evf{display:inline-block;width:62mm;height:46mm;' +
+        'border:1px solid #d7dbe0;background:#fff;text-align:center;' +
+        'line-height:46mm;vertical-align:top;margin:2px 6px 2px 0;overflow:hidden;}' +
+      '#qcPrintRoot .evf img{border:0;vertical-align:middle;}' +
+      '#qcPrintRoot .grid{display:flex;flex-wrap:wrap;gap:8px;}' +
+      '#qcPrintRoot .grid .photo{width:62mm;}' +
       '#qcPrintRoot .foot{margin-top:18px;border-top:1px solid #d7dbe0;padding-top:6px;' +
         'font-size:9.5px;color:#8a8a8a;}' +
       '#qcPrintRoot .qblock{width:100%;border-collapse:collapse;margin:0 0 10px;page-break-inside:avoid;font-size:10px;}' +
@@ -116,7 +123,6 @@
       '#qcPrintRoot .qblock .d2{padding-left:13mm;}' +
       '#qcPrintRoot .qblock .d3{padding-left:17mm;}' +
       '#qcPrintRoot .qblock .dash{color:#9aa3ad;}' +
-      '#qcPrintRoot img.ev{max-width:62mm;max-height:48mm;border:1px solid #d7dbe0;margin:2px 6px 2px 0;}' +
       '#qcPrintRoot .qtop{margin-bottom:0;}' +
       '#qcPrintRoot .pagebreak{page-break-before:always;}' +
     '}';
@@ -156,7 +162,7 @@
 
       var photoCell = shots.length
         ? shots.map(function (src) {
-            return '<img class="ev" src="' + src + '">';
+            return '<span class="evf"><img class="ev" src="' + src + '"></span>';
           }).join('')
         : '<span class="dash">–</span>';
 
@@ -202,7 +208,7 @@
       var src = p.data_url || p.dataUrl || '';
       var cap = 'រូបទី ' + (i + 1) + (p.item_id ? ' · ' + p.item_id : '');
       html += '<div class="photo"><div class="cap">' + esc(cap) + '</div>' +
-              '<img src="' + src + '"></div>';
+              '<span class="evf"><img class="ev" src="' + src + '"></span></div>';
     });
     return html + '</div>';
   }
@@ -215,15 +221,31 @@
      with no font the browser cannot shape Khmer, which is the exact bug this
      feature exists to fix. Printing in place keeps the already-loaded font
      and avoids pop-up blockers too. */
-  function openAndPrint(bodyHtml) {
+  /* Build the report into the page. `screenMode` lays it out off-screen so it
+     can be photographed for a direct download instead of handed to the
+     printer; either way the browser does the Khmer shaping. */
+  function buildRoot(bodyHtml, screenMode) {
     var old = document.getElementById('qcPrintRoot');
     if (old && old.parentNode) old.parentNode.removeChild(old);
     var oldStyle = document.getElementById('qcPrintStyle');
     if (oldStyle && oldStyle.parentNode) oldStyle.parentNode.removeChild(oldStyle);
 
+    var css = PRINT_CSS;
+    if (screenMode) {
+      // Same rules, but applied on screen, and without the two rules that
+      // blank the application out — the page must stay usable while we work.
+      css = css
+        .replace('@media print{', '@media all{')
+        .replace('html.qc-printing body>*{display:none!important;}', '')
+        .replace('html.qc-printing body>#qcPrintRoot{display:block!important;}', '');
+      css = '#qcPrintRoot{display:block!important;position:fixed!important;' +
+            'left:-20000px!important;top:0!important;width:' + PAGE_W_MM + 'mm!important;' +
+            'background:#fff!important;z-index:-1!important;}' + css;
+    }
+
     var style = document.createElement('style');
     style.id = 'qcPrintStyle';
-    style.textContent = PRINT_CSS;
+    style.textContent = css;
     document.head.appendChild(style);
 
     var root = document.createElement('div');
@@ -231,6 +253,52 @@
     root.setAttribute('data-qc-no-i18n', '1');
     root.innerHTML = bodyHtml;
     document.body.appendChild(root);
+    return { root: root, style: style };
+  }
+
+  /* Give every photo an explicit size that fits its frame without stretching.
+     Doing the arithmetic here instead of leaning on object-fit keeps the
+     printed report and the downloaded one identical. */
+  var FRAME_W_MM = 62, FRAME_H_MM = 46;   // must match the .evf rule above
+
+  function fitImages(root) {
+    var frames = root.querySelectorAll('.evf');
+    for (var i = 0; i < frames.length; i++) {
+      var f = frames[i];
+      var im = f.querySelector('img');
+      if (!im) continue;
+      // While printing the report is display:none on screen, so it cannot be
+      // measured. CSS defines 1mm as exactly 96/25.4px, so fall back to that.
+      var MM = 96 / 25.4;
+      var bw = f.clientWidth || Math.round(FRAME_W_MM * MM);
+      var bh = f.clientHeight || Math.round(FRAME_H_MM * MM);
+      var nw = im.naturalWidth, nh = im.naturalHeight;
+      if (!bw || !bh) continue;
+      if (!nw || !nh) { im.style.width = bw + 'px'; im.style.height = 'auto'; continue; }
+      var s = Math.min(bw / nw, bh / nh);
+      im.style.width = Math.max(1, Math.round(nw * s)) + 'px';
+      im.style.height = Math.max(1, Math.round(nh * s)) + 'px';
+    }
+  }
+
+  /* Wait until every picture in the report has finished loading. */
+  function whenImagesReady(root, cb) {
+    var imgs = Array.prototype.slice.call(root.querySelectorAll('img'));
+    var waiting = imgs.filter(function (im) { return !im.complete; }).length;
+    if (!waiting) { cb(); return; }
+    var done = 0;
+    imgs.forEach(function (im) {
+      if (im.complete) return;
+      var tick = function () { if (++done >= waiting) cb(); };
+      im.addEventListener('load', tick);
+      im.addEventListener('error', tick);
+    });
+    setTimeout(cb, 6000);   // backstop so one stuck image cannot block the report
+  }
+
+  function openAndPrint(bodyHtml) {
+    var built = buildRoot(bodyHtml, false);
+    var root = built.root, style = built.style;
 
     function cleanup() {
       document.documentElement.classList.remove('qc-printing');
@@ -242,32 +310,181 @@
     }
     window.addEventListener('afterprint', cleanup);
 
-    var imgs = Array.prototype.slice.call(root.querySelectorAll('img'));
-    var waiting = imgs.filter(function (im) { return !im.complete; }).length;
-
-    function go() {
+    whenImagesReady(root, function () {
+      fitImages(root);
       document.documentElement.classList.add('qc-printing');
       setTimeout(function () {
         try { window.focus(); window.print(); } catch (e) {}
         // Safari and some mobile browsers never fire afterprint.
         setTimeout(cleanup, 1500);
       }, 250);
+    });
+  }
+
+  /* ====================== direct PDF download =======================
+     The print dialog gives selectable text, but it is a dialog: the file
+     only lands in Downloads after the person changes the destination.
+     This path photographs the very same report — so the Khmer is shaped
+     by the browser exactly as before — cuts it at block boundaries so no
+     finding is split across a page, and writes the pages into a PDF that
+     downloads on one click, the way the Word button already does.
+     ================================================================== */
+
+  var PAGE_W_MM = 186;    // A4 width (210) minus the 12mm side margins
+  var PAGE_H_MM = 267;    // A4 height (297) minus the 14/16mm top and bottom
+  var MARGIN_X_MM = 12;
+  var MARGIN_Y_MM = 14;
+
+  function jsPdfCtor() {
+    if (window.jspdf && window.jspdf.jsPDF) return window.jspdf.jsPDF;
+    if (window.jsPDF) return window.jsPDF;
+    return null;
+  }
+
+  /* Page breaks that fall between blocks, never through one. */
+  function cutPoints(root, pageCssH) {
+    var kids = Array.prototype.slice.call(root.children);
+    var rootTop = root.getBoundingClientRect().top;
+    var total = root.scrollHeight;
+    var cuts = [0], start = 0;
+
+    kids.forEach(function (el) {
+      var r = el.getBoundingClientRect();
+      var top = r.top - rootTop;
+      var bottom = top + r.height;
+      if (bottom - start <= pageCssH) return;        // still fits on this page
+      if (top - start > 0) { cuts.push(top); start = top; }
+      // A block taller than a whole page has to be cut; step through it.
+      while (bottom - start > pageCssH) {
+        start = start + pageCssH;
+        cuts.push(start);
+      }
+    });
+    cuts.push(total);
+    return cuts;
+  }
+
+  function savePdfFromRoot(root, fileName, done) {
+    var H2C = window.html2canvas;
+    var JsPDF = jsPdfCtor();
+    if (!H2C || !JsPDF) {
+      alert('មិនអាចបង្កើតឯកសារ PDF បានទេ (បណ្ណាល័យមិនបានផ្ទុក)។ សូមប្រើ Ctrl+P ជំនួស។');
+      done();
+      return;
     }
 
-    if (!waiting) { go(); return; }
-    var done = 0;
-    imgs.forEach(function (im) {
-      if (im.complete) return;
-      var tick = function () { if (++done >= waiting) go(); };
-      im.addEventListener('load', tick);
-      im.addEventListener('error', tick);
+    var cssW = root.offsetWidth || 1;
+    var pxPerMm = cssW / PAGE_W_MM;
+    var pageCssH = PAGE_H_MM * pxPerMm;
+    var cuts = cutPoints(root, pageCssH);
+    var scale = Math.min(2, Math.max(1, (window.devicePixelRatio || 1) * 1.5));
+    // Safari caps a canvas at roughly 16.7 million pixels; a long report at
+    // full scale would sail past that and come back blank. Step the scale
+    // down instead, so a 20-page report still produces a file.
+    var MAX_AREA = 16000000;
+    var area = cssW * root.scrollHeight * scale * scale;
+    if (area > MAX_AREA) {
+      scale = Math.max(0.6, scale * Math.sqrt(MAX_AREA / area));
+    }
+
+    H2C(root, {
+      scale: scale,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      logging: false,
+      windowWidth: cssW,
+      height: root.scrollHeight,
+      scrollX: 0,
+      scrollY: 0
+    }).then(function (canvas) {
+      var doc = new JsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+      var slice = document.createElement('canvas');
+      var ctx = slice.getContext('2d');
+      var pages = 0;
+
+      for (var i = 0; i < cuts.length - 1; i++) {
+        var topPx = Math.round(cuts[i] * scale);
+        var hPx = Math.round((cuts[i + 1] - cuts[i]) * scale);
+        if (hPx <= 1) continue;
+        if (topPx + hPx > canvas.height) hPx = canvas.height - topPx;
+        if (hPx <= 1) continue;
+
+        slice.width = canvas.width;
+        slice.height = hPx;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, slice.width, slice.height);
+        ctx.drawImage(canvas, 0, topPx, canvas.width, hPx, 0, 0, canvas.width, hPx);
+
+        var hMm = (hPx / scale) / pxPerMm;
+        if (pages > 0) doc.addPage();
+        doc.addImage(slice.toDataURL('image/jpeg', 0.92), 'JPEG',
+                     MARGIN_X_MM, MARGIN_Y_MM, PAGE_W_MM, hMm);
+        pages++;
+      }
+
+      if (!pages) {
+        alert('របាយការណ៍ទទេ — គ្មានអ្វីសម្រាប់នាំចេញទេ។');
+      } else {
+        doc.save(fileName);
+      }
+      done();
+    })['catch'](function (e) {
+      try { console.error('[qc-print] pdf failed', e); } catch (e2) {}
+      alert('បង្កើត PDF មិនបានសម្រេច។ សូមប្រើ Ctrl+P ហើយជ្រើស "Save as PDF" ជំនួស។');
+      done();
     });
-    setTimeout(go, 6000);   // backstop so a stuck image cannot block printing
+  }
+
+  /* A small "please wait" so a multi-page report does not look frozen. */
+  function busy(on) {
+    var id = 'qcPdfBusy';
+    var el = document.getElementById(id);
+    if (!on) { if (el && el.parentNode) el.parentNode.removeChild(el); return; }
+    if (el) return;
+    el = document.createElement('div');
+    el.id = id;
+    el.setAttribute('data-qc-no-i18n', '1');
+    el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(10,12,16,.55);' +
+      'display:flex;align-items:center;justify-content:center;';
+    el.innerHTML = '<div style="background:#fff;border-radius:10px;padding:18px 26px;' +
+      'font:600 14px system-ui,sans-serif;color:#12151b;box-shadow:0 8px 30px rgba(0,0,0,.3)">' +
+      'កំពុងបង្កើតឯកសារ PDF…</div>';
+    document.body.appendChild(el);
+  }
+
+  function downloadReport(bodyHtml, fileName) {
+    busy(true);
+    var built = buildRoot(bodyHtml, true);
+    document.documentElement.classList.add('qc-printing');
+
+    function finish() {
+      document.documentElement.classList.remove('qc-printing');
+      if (built.root.parentNode) built.root.parentNode.removeChild(built.root);
+      if (built.style.parentNode) built.style.parentNode.removeChild(built.style);
+      busy(false);
+    }
+
+    whenImagesReady(built.root, function () {
+      fitImages(built.root);
+      // one frame so layout and the webfont settle before the photograph
+      setTimeout(function () { savePdfFromRoot(built.root, fileName, finish); }, 400);
+    });
+  }
+
+  function safeName(s) {
+    return String(s || '').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_').slice(0, 60) || 'report';
   }
 
   /* ------------------------ current inspection ---------------------- */
 
-  function printCurrent() {
+  /* 'download' writes the file straight to Downloads; 'print' hands the
+     same report to the browser's print engine (selectable text). */
+  function emit(mode, bodyHtml, fileName) {
+    if (mode === 'print') openAndPrint(bodyHtml);
+    else downloadReport(bodyHtml, fileName);
+  }
+
+  function printCurrent(mode) {
     var totals = (window.computeTotals ? window.computeTotals() : null);
     var faults = (window.getFaults ? window.getFaults() : []);
     if (!totals) { alert('មិនអាចអានទិន្នន័យសវនកម្មបានទេ។'); return; }
@@ -301,12 +518,14 @@
       '<h2>កំហុស និងការរកឃើញ (' + faults.length + ')</h2>' +
       faultHeader() + faultBlocks(faults, null);
 
-    openAndPrint(html + footer(no));
+    emit(mode, html + footer(no),
+         'QC_Report_' + safeName(String(store).split(' — ')[0]) + '_' +
+         (val('f_date') || new Date().toISOString().slice(0, 10)) + '.pdf');
   }
 
   /* ---------------------------- history ----------------------------- */
 
-  function printHistory() {
+  function printHistory(mode) {
     var rows = (window.filteredHistory ? window.filteredHistory() : []);
     if (!rows.length) { alert('គ្មានទិន្នន័យសម្រាប់របាយការណ៍ — សូមរក្សាទុកសវនកម្ម ឬពិនិត្យតម្រង។'); return; }
 
@@ -385,7 +604,10 @@
         });
       });
 
-      openAndPrint(html + footer(no));
+      emit(mode, html + footer(no),
+           'QC_History_Report_' +
+           (names.length === 1 ? safeName(String(names[0]).split(' — ')[0]) : 'All_Stores') +
+           '.pdf');
     });
   }
 
@@ -435,8 +657,10 @@
   }
 
   function mount() {
-    rebind('btnExportPdf', printCurrent, '📄 របាយការណ៍ PDF (កំហុស)');
-    rebind('btnExportHistoryPdf', printHistory, '📄 របាយការណ៍ PDF (ហាងដែលបានជ្រើស)');
+    rebind('btnExportPdf', function () { printCurrent('download'); },
+           '📄 របាយការណ៍ PDF (កំហុស)');
+    rebind('btnExportHistoryPdf', function () { printHistory('download'); },
+           '📄 របាយការណ៍ PDF (ហាងដែលបានជ្រើស)');
 
     // The separate print buttons added earlier are no longer needed.
     var extra = document.querySelectorAll('[data-qc-print]');
@@ -458,8 +682,10 @@
     } catch (e) { /* the interval below covers it */ }
     setInterval(mount, 4000);
 
-    window.qcPrintInspection = printCurrent;
-    window.qcPrintHistory = printHistory;
+    window.qcPrintInspection = function () { printCurrent('print'); };
+    window.qcPrintHistory = function () { printHistory('print'); };
+    window.qcDownloadInspection = function () { printCurrent('download'); };
+    window.qcDownloadHistory = function () { printHistory('download'); };
   }
 
   if (document.readyState === 'loading') {

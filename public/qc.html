@@ -18,6 +18,7 @@
 <script src="/vendor/jszip.min.js"></script>
 <script src="/vendor/jspdf.umd.min.js"></script>
 <script src="/vendor/jspdf.plugin.autotable.min.js"></script>
+<script src="/vendor/html2canvas.min.js"></script>
 <link rel="preload" href="/NotoSansKhmer-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:'ONMART Khmer';src:url('/NotoSansKhmer-Regular.woff2') format('woff2');
@@ -1858,6 +1859,44 @@ function wordLogoHtml(){
 }
 /* The ON Mart audit block layout, shared by both Word reports: one block
    per finding with its own answer, reason, note and photo evidence. */
+/* ---- uniform photo frames for Word -------------------------------
+   Word's HTML engine ignores object-fit, so the "fit inside a box"
+   maths is done here instead: every picture is measured once, then
+   emitted with explicit width/height that fit the same frame.       */
+const QC_WORD_BOX = { w: 200, h: 150 };   // inner picture area, px
+const QC_PHOTO_SIZE = {};                 // dataUrl -> {w,h}
+
+function qcMeasurePhotos(urls){
+  const todo = (urls||[]).filter(u => u && !QC_PHOTO_SIZE[u]);
+  return Promise.all(todo.map(u => new Promise(done => {
+    const im = new Image();
+    im.onload = () => { QC_PHOTO_SIZE[u] = { w: im.naturalWidth, h: im.naturalHeight }; done(); };
+    im.onerror = () => done();
+    im.src = u;
+  })));
+}
+
+function qcFitBox(url, boxW, boxH){
+  const n = QC_PHOTO_SIZE[url];
+  const W = boxW || QC_WORD_BOX.w, H = boxH || QC_WORD_BOX.h;
+  if(!n || !n.w || !n.h) return { w: W, h: H };
+  const s = Math.min(W / n.w, H / n.h);
+  return { w: Math.max(1, Math.round(n.w * s)), h: Math.max(1, Math.round(n.h * s)) };
+}
+
+function qcShotsOf(f, photosByItem){
+  if(f.photos && f.photos.length) return f.photos.map(x=>x.dataUrl||x.data_url).filter(Boolean);
+  if(photosByItem && f.itemId && photosByItem[f.itemId])
+    return photosByItem[f.itemId].map(x=>x.data_url||x.dataUrl).filter(Boolean);
+  return [];
+}
+
+function qcFaultPhotoUrls(faults, photosByItem){
+  const out = [];
+  (faults||[]).forEach(f => { qcShotsOf(f, photosByItem).forEach(u => out.push(u)); });
+  return out;
+}
+
 function wordFaultBlocks(faults, photosByItem){
   if(!faults || !faults.length) return '<p>គ្មានកំហុសត្រូវបានកត់ត្រា។</p>';
   const dash = '<span style="color:#9aa3ad">–</span>';
@@ -1866,12 +1905,12 @@ function wordFaultBlocks(faults, photosByItem){
   let out = '<table class="qb"><tr class="qhdr">'
           + '<td>សំណួរ / Question</td><td class="sc">ពិន្ទុទទួលបាន</td><td class="sc">ពិន្ទុពេញ</td></tr></table>';
   faults.forEach(f=>{
-    let shots = [];
-    if(f.photos && f.photos.length) shots = f.photos.map(x=>x.dataUrl||x.data_url);
-    else if(photosByItem && f.itemId && photosByItem[f.itemId])
-      shots = photosByItem[f.itemId].map(x=>x.data_url||x.dataUrl);
+    const shots = qcShotsOf(f, photosByItem);
     const photoCell = shots.length
-      ? shots.map(s=>`<img class="ev" src="${s}">`).join('')
+      ? '<table class="evbox"><tr>' + shots.map(s=>{
+          const d = qcFitBox(s);
+          return `<td><img class="ev" width="${d.w}" height="${d.h}" src="${s}"></td>`;
+        }).join('') + '</tr></table>'
       : dash;
     const row = (label, value, pad) =>
       `<tr><td class="lbl" style="padding-left:${pad}px">${esc(label)}</td>`
@@ -1904,13 +1943,17 @@ function wordBlockStyles(){
     table.qb tr.qrow.warning td{color:#C98A1B;}
     table.qb td.lbl{width:170px;background:#FBFBFC;color:#333;}
     table.qb .qmeta{font-size:9px;color:#5A5A5A;}
-    img.ev{max-width:240px;max-height:180px;border:1px solid #DADDE2;margin:2px 6px 2px 0;}
+    table.evbox{border-collapse:collapse;margin:2px 0;}
+    table.evbox td{width:${QC_WORD_BOX.w + 10}px;height:${QC_WORD_BOX.h + 10}px;
+      border:1px solid #DADDE2;text-align:center;vertical-align:middle;padding:4px;background:#FFFFFF;}
+    img.ev{border:0;}
   `;
 }
 
-function exportWordReport(){
+async function exportWordReport(){
   const t = computeTotals();
   const faults = getFaults();
+  await qcMeasurePhotos(qcFaultPhotoUrls(faults, null));
   const styles = `
     body{font-family:'Khmer OS','Noto Sans Khmer',Calibri,Arial,sans-serif;color:#181B21;}
     h1{color:#007DFF;font-size:22px;margin-bottom:2px;}
@@ -2067,6 +2110,15 @@ async function exportHistoryWordByStore(){
       else loosePhotos[h.id].push(x);
     });
   }
+  // Measure every picture once so each can be emitted at a size that fits
+  // the same frame — Word cannot do that fitting on its own.
+  const allShots = [];
+  for(const h of rows){
+    qcFaultPhotoUrls(h.faults, photoIndex[h.id] || null).forEach(u=>allShots.push(u));
+    (loosePhotos[h.id]||[]).forEach(p=>{ if(p.data_url) allShots.push(p.data_url); });
+  }
+  await qcMeasurePhotos(allShots);
+
   const storeGroups = {};
   rows.forEach(h=>{ (storeGroups[h.store] = storeGroups[h.store]||[]).push(h); });
   const storeNames = Object.keys(storeGroups).sort();
@@ -2139,8 +2191,10 @@ async function exportHistoryWordByStore(){
       html += `<h2>រូបភាពភស្តុតាងផ្សេងទៀត — ${name} · ${h.date}</h2>`;
       extra.forEach(p=>{
         wordPhotoNo++;
-        html += `<p style="page-break-inside:avoid;"><b>រូបទី ${wordPhotoNo}</b>`
-             +  `<br><img style="max-width:420px;margin:6px 0;" src="${p.data_url}"></p>`;
+        const d = qcFitBox(p.data_url);
+        html += `<p style="page-break-inside:avoid;"><b>រូបទី ${wordPhotoNo}</b></p>`
+             +  `<table class="evbox"><tr><td>`
+             +  `<img class="ev" width="${d.w}" height="${d.h}" src="${p.data_url}"></td></tr></table>`;
       });
     }
   }
