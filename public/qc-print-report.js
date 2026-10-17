@@ -25,6 +25,7 @@
      root-relative paths resolve to nothing. Every asset must be absolute or
      the Khmer webfont silently fails to load — and without the font the
      browser cannot shape Khmer either, which is the very bug this fixes. */
+  var BUILD = '20261017d';        // bump on every release; also used for cache-busting
   var ORIGIN = (location && location.origin) ? location.origin : '';
   var FONT_REG = ORIGIN + '/NotoSansKhmer-Regular.woff2';
   var FONT_BOLD = ORIGIN + '/NotoSansKhmer-Bold.woff2';
@@ -364,6 +365,27 @@
     return cuts;
   }
 
+  /* A browser still holding an older cached copy of qc.html has no
+     html2canvas script tag, so fetch the library on demand rather than
+     making the person clear their cache before the button works. */
+  function ensureH2C(cb) {
+    if (typeof window.html2canvas === 'function') { cb(true); return; }
+    var id = 'qcH2CLoader';
+    if (document.getElementById(id)) {
+      var t = setInterval(function () {
+        if (typeof window.html2canvas === 'function') { clearInterval(t); cb(true); }
+      }, 200);
+      setTimeout(function () { clearInterval(t); cb(typeof window.html2canvas === 'function'); }, 15000);
+      return;
+    }
+    var s = document.createElement('script');
+    s.id = id;
+    s.src = ORIGIN + '/vendor/html2canvas.min.js?v=' + BUILD;
+    s.onload = function () { cb(typeof window.html2canvas === 'function'); };
+    s.onerror = function () { cb(false); };
+    document.head.appendChild(s);
+  }
+
   function savePdfFromRoot(root, fileName, done) {
     var H2C = window.html2canvas;
     var JsPDF = jsPdfCtor();
@@ -466,8 +488,10 @@
 
     whenImagesReady(built.root, function () {
       fitImages(built.root);
-      // one frame so layout and the webfont settle before the photograph
-      setTimeout(function () { savePdfFromRoot(built.root, fileName, finish); }, 400);
+      ensureH2C(function () {
+        // one frame so layout and the webfont settle before the photograph
+        setTimeout(function () { savePdfFromRoot(built.root, fileName, finish); }, 400);
+      });
     });
   }
 
@@ -681,6 +705,11 @@
       mo.observe(document.body, { childList: true, subtree: true });
     } catch (e) { /* the interval below covers it */ }
     setInterval(mount, 4000);
+
+    // A visible stamp of which build is actually running in the browser,
+    // so "is it deployed?" can be answered in one line from the console.
+    window.QC_BUILD = BUILD;
+    try { console.log('[ON MART QC] build ' + BUILD); } catch (e) {}
 
     window.qcPrintInspection = function () { printCurrent('print'); };
     window.qcPrintHistory = function () { printHistory('print'); };
