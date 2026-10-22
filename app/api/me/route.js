@@ -30,7 +30,10 @@ export async function GET() {
   let refreshed = false;
 
   try {
-    const rows = await sql`SELECT role, name, active FROM auditors WHERE email = ${s.email} LIMIT 1`;
+    // Sign-in matches on lower(email); this must match the same way, or an
+    // account stored with different capitalisation would never be found.
+    const rows = await sql`SELECT role, name, active FROM auditors
+                           WHERE lower(email) = ${String(s.email || '').toLowerCase()} LIMIT 1`;
     if (rows[0]) {
       if (rows[0].role && rows[0].role !== role) { role = rows[0].role; refreshed = true; }
       if (rows[0].name) name = rows[0].name;
