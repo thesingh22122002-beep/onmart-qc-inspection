@@ -43,6 +43,7 @@ export async function POST(req) {
   if (!list.length) return Response.json({ ok: false, error: 'no items' }, { status: 400 });
 
   const saved = [];
+  const skipped = [];
   for (const s of list) {
     if (!s || !s.id) continue;
     const r = await sql`
@@ -84,12 +85,16 @@ export async function POST(req) {
         faults = EXCLUDED.faults,
         payload = EXCLUDED.payload,
         device_id = EXCLUDED.device_id,
-        deleted = false,
         updated_at = now(),
         version = inspections.version + 1
+      -- An archived record must stay archived. This used to set
+      -- deleted = false on every push, so a device syncing its own copy
+      -- quietly undid what an admin had deleted, over and over.
+      WHERE inspections.deleted = false
       RETURNING id, updated_at`;
     if (r[0]) saved.push({ id: r[0].id, updatedAt: r[0].updated_at });
+    else skipped.push(String(s.id));   // the row exists but is archived
   }
 
-  return Response.json({ ok: true, saved, serverTime: new Date().toISOString() });
+  return Response.json({ ok: true, saved, skipped, serverTime: new Date().toISOString() });
 }

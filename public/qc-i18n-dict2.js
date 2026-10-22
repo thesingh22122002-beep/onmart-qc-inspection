@@ -304,8 +304,8 @@ window.QC_I18N = Object.assign(window.QC_I18N || {}, {
   'A single zero-tolerance breach fails the audit.',
 'កត់ត្រាពិន្ទុសរុប (%) របស់ខែនីមួយៗ ដើម្បីតាមដានលទ្ធផលហាងតាមពេលវេលា។':
   'Record each month’s total score (%) to track store performance over time.',
-'ចុច "រក្សាទុកសវនកម្មនេះ" នៅខាងលើ ដើម្បីរក្សាទុកសវនកម្មបច្ចុប្បន្នចូលក្នុងប្រវត្តិ។ ទិន្នន័យរក្សាទុកនៅលើឧបករណ៍នេះប៉ុណ្ណោះ (កម្មវិធីរុករកតែមួយ)។':
-  'Click "Save This Audit" above to store the current audit in the history. Data is kept on this device only (this browser).',
+'ចុច "រក្សាទុកសវនកម្មនេះ" នៅខាងលើ ដើម្បីរក្សាទុកសវនកម្មបច្ចុប្បន្នចូលក្នុងប្រវត្តិ។ ទិន្នន័យរក្សាទុកក្នុងឧបករណ៍នេះ ហើយធ្វើសមកាលកម្មជាមួយម៉ាស៊ីនបម្រើ — ការកែ ឬការលុបពីផ្ទាំងគ្រប់គ្រង Admin នឹងមកដល់ទីនេះដែរ។':
+  'Click "Save This Audit" above to store the current audit in the history. Data is kept on this device and synced with the server — edits and deletions made in Admin arrive here too.',
 'កែសម្រួលបញ្ជីទាំងនេះ; វានឹងបំពាក់ក្នុងបញ្ជីជម្រើសនៅទំព័រត្រួតពិនិត្យ។':
   'Edit these lists; they populate the dropdowns on the inspection page.',
 'ពាក្យបច្ចេកទេសមួយ ត្រូវប្រើការបកប្រែតែមួយ ក្នុងរបាយការណ៍ និងការត្រួតពិនិត្យទាំងអស់។':
