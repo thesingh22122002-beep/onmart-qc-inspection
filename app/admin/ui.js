@@ -177,14 +177,18 @@ export function Toasts({ items, onDone }) {
   }, [items, onDone]);
 
   return (
-    <div style={{ position: 'fixed', right: 16, bottom: 16, zIndex: 3000, display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 'min(420px, calc(100vw - 32px))' }}>
+    /* pointerEvents:'none' on the stack so the empty space around the
+       toasts never swallows a click on the page underneath; each toast
+       turns it back on so it can still be dismissed by clicking it. */
+    <div style={{ position: 'fixed', right: 16, bottom: 16, zIndex: 3000, display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 'min(420px, calc(100vw - 32px))', pointerEvents: 'none' }}>
       {items.map(t => (
         <div key={t.id} onClick={() => onDone(t.id)} style={{
           background: t.kind === 'err' ? '#FEE2E2' : '#ECFDF5',
           color: t.kind === 'err' ? '#991B1B' : '#065F46',
           border: '1px solid ' + (t.kind === 'err' ? '#FECACA' : '#A7F3D0'),
           borderRadius: 11, padding: '11px 14px', fontSize: 13, lineHeight: 1.8,
-          boxShadow: '0 8px 22px rgba(15,23,42,.14)', cursor: 'pointer', wordBreak: 'break-word'
+          boxShadow: '0 8px 22px rgba(15,23,42,.14)', cursor: 'pointer', wordBreak: 'break-word',
+          pointerEvents: 'auto'
         }}>{t.text}</div>
       ))}
     </div>

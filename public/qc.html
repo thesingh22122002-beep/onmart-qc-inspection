@@ -14,11 +14,11 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="/vendor/xlsx.full.min.js?v=20261017d"></script>
-<script src="/vendor/jszip.min.js?v=20261017d"></script>
-<script src="/vendor/jspdf.umd.min.js?v=20261017d"></script>
-<script src="/vendor/jspdf.plugin.autotable.min.js?v=20261017d"></script>
-<script src="/vendor/html2canvas.min.js?v=20261017d"></script>
+<script src="/vendor/xlsx.full.min.js?v=20261022a"></script>
+<script src="/vendor/jszip.min.js?v=20261022a"></script>
+<script src="/vendor/jspdf.umd.min.js?v=20261022a"></script>
+<script src="/vendor/jspdf.plugin.autotable.min.js?v=20261022a"></script>
+<script src="/vendor/html2canvas.min.js?v=20261022a"></script>
 <link rel="preload" href="/NotoSansKhmer-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:'ONMART Khmer';src:url('/NotoSansKhmer-Regular.woff2') format('woff2');
@@ -516,8 +516,14 @@ body{margin:0;background:var(--canvas);color:var(--text);font-family:var(--body)
         <button class="btn btn-outline" id="btnExportHistoryWord">📝 របាយការណ៍ Word (ហាងដែលបានជ្រើស)</button>
         <button class="btn btn-outline" id="btnExportHistoryPdf">📄 របាយការណ៍ PDF (ហាងដែលបានជ្រើស)</button>
       </div>
+      <div id="historySelBar" style="display:none;margin-top:14px;padding:10px 14px;border-radius:10px;
+           background:#EEF4FF;border:1px solid #CBD9F5;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span id="historySelCount" style="font-weight:700;"></span>
+        <button class="btn btn-sm btn-danger" id="btnDeleteSelected">លុបដែលបានជ្រើស</button>
+        <button class="btn btn-sm btn-outline" id="btnClearSelection">សម្អាតការជ្រើស</button>
+      </div>
       <table class="sc-table" style="margin-top:16px;">
-        <thead><tr><th>ហាង</th><th>កាលបរិច្ឆេទ</th><th>វេន</th><th>អ្នកសវនកម្ម</th><th class="num">ពិន្ទុ %</th><th>លំដាប់ថ្នាក់</th><th>ធ្លាក់ស្វ័យប្រវត្តិ</th><th></th></tr></thead>
+        <thead><tr><th style="width:36px;"><input type="checkbox" id="h_selAll" title="ជ្រើសទាំងអស់"></th><th>ហាង</th><th>កាលបរិច្ឆេទ</th><th>វេន</th><th>អ្នកសវនកម្ម</th><th class="num">ពិន្ទុ %</th><th>លំដាប់ថ្នាក់</th><th>ធ្លាក់ស្វ័យប្រវត្តិ</th><th></th></tr></thead>
         <tbody id="historyBody"></tbody>
       </table>
       <p class="foot-note" id="historyEmptyNote" style="display:none;">មិនទាន់មានសវនកម្មដែលបានរក្សាទុកនៅឡើយទេ។</p>
@@ -1306,15 +1312,129 @@ function renderHistory(){
 
   const rows = filteredHistory();
   document.getElementById('historyEmptyNote').style.display = state.history.length===0 ? 'block' : 'none';
-  document.getElementById('historyBody').innerHTML = rows.map(h=>`
-    <tr>
-      <td>${h.store}</td><td>${h.date}</td><td>${h.shift||'—'}</td><td>${h.auditor||'—'}</td>
-      <td class="num">${(h.pct*100).toFixed(1)}%</td><td>${h.band}</td>
-      <td>${h.autoFail?'<span style="color:var(--fail);font-weight:700;">ធ្លាក់ស្វ័យប្រវត្តិ</span>':'ជាប់'}</td>
-      <td><button class="btn btn-sm btn-danger" data-role="del-history" data-id="${h.id}">លុប</button></td>
 
-    </tr>
-  `).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--muted);">គ្មានទិន្នន័យត្រូវនឹងតម្រង</td></tr>`;
+  // Drop ticks for rows that are no longer on screen, so a hidden row can
+  // never be deleted by a selection the person cannot see.
+  const visible = new Set(rows.map(h=>h.id));
+  Object.keys(historySel).forEach(id=>{ if(!visible.has(id)) delete historySel[id]; });
+
+  document.getElementById('historyBody').innerHTML = rows.map(h=>
+    h.id === historyEditId ? historyEditRow(h) : historyViewRow(h)
+  ).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--muted);">គ្មានទិន្នន័យត្រូវនឹងតម្រង</td></tr>`;
+
+  renderHistorySelection(rows);
+}
+
+/* ---- row selection ------------------------------------------------ */
+function selectedHistory(){
+  return filteredHistory().filter(h=>historySel[h.id]);
+}
+
+function renderHistorySelection(rows){
+  rows = rows || filteredHistory();
+  const n = rows.filter(h=>historySel[h.id]).length;
+
+  const bar = document.getElementById('historySelBar');
+  if(bar){
+    bar.style.display = n ? 'flex' : 'none';
+    const c = document.getElementById('historySelCount');
+    if(c) c.textContent = `បានជ្រើស ${n} សវនកម្ម`;
+  }
+
+  const all = document.getElementById('h_selAll');
+  if(all){
+    all.checked = rows.length > 0 && n === rows.length;
+    all.indeterminate = n > 0 && n < rows.length;   // some, but not all
+  }
+}
+
+/* ============================================================
+   HISTORY — edit a saved audit in place
+   Scores are not editable here: they come from the checklist, and
+   typing over them would put this row out of step with the audit
+   it was calculated from. The descriptive fields are chosen from
+   the same lists the inspection form uses, so a typo cannot create
+   a store or an inspector that does not exist.
+   ============================================================ */
+var historyEditId = null;   // var, not let: renderHistory can run before this line is reached
+var historySel = {};        // id -> true for every ticked row
+
+function hEsc(v){
+  return String(v===undefined||v===null?'':v)
+    .replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function hOptions(list, current){
+  const all = list.slice();
+  if(current && all.indexOf(current) < 0) all.unshift(current);   // keep a value no longer on the list
+  return all.map(o=>`<option value="${hEsc(o)}"${o===current?' selected':''}>${hEsc(o)}</option>`).join('');
+}
+
+function historyCheckCell(h){
+  return `<td><input type="checkbox" data-role="sel-history" data-id="${hEsc(h.id)}"${historySel[h.id]?' checked':''}></td>`;
+}
+
+function historyViewRow(h){
+  return `
+    <tr${historySel[h.id]?' style="background:#F3F7FF;"':''}>
+      ${historyCheckCell(h)}
+      <td>${hEsc(h.store)}</td><td>${hEsc(h.date)}</td><td>${hEsc(h.shift||'—')}</td><td>${hEsc(h.auditor||'—')}</td>
+      <td class="num">${(h.pct*100).toFixed(1)}%</td><td>${hEsc(h.band)}</td>
+      <td>${h.autoFail?'<span style="color:var(--fail);font-weight:700;">ធ្លាក់ស្វ័យប្រវត្តិ</span>':'ជាប់'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-sm btn-outline" data-role="edit-history" data-id="${hEsc(h.id)}">កែ</button>
+        <button class="btn btn-sm btn-danger" data-role="del-history" data-id="${hEsc(h.id)}">លុប</button>
+      </td>
+    </tr>`;
+}
+
+function historyEditRow(h){
+  const stores = (state.stores||[]).map(s=>`${s.code} — ${s.name}`);
+  return `
+    <tr data-editing="1" style="background:#F8FAFF;">
+      ${historyCheckCell(h)}
+      <td><select class="h-ed" data-ed="store" style="width:100%;">${hOptions(stores, h.store)}</select></td>
+      <td><input class="h-ed" data-ed="date" type="date" value="${hEsc(h.date)}" style="width:100%;"></td>
+      <td><select class="h-ed" data-ed="shift" style="width:100%;">${hOptions(SHIFTS, h.shift||'')}</select></td>
+      <td><select class="h-ed" data-ed="auditor" style="width:100%;">${hOptions(state.auditors||[], h.auditor||'')}</select></td>
+      <td class="num">${(h.pct*100).toFixed(1)}%</td><td>${hEsc(h.band)}</td>
+      <td>${h.autoFail?'<span style="color:var(--fail);font-weight:700;">ធ្លាក់ស្វ័យប្រវត្តិ</span>':'ជាប់'}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-sm btn-primary" data-role="save-history" data-id="${hEsc(h.id)}">រក្សាទុក</button>
+        <button class="btn btn-sm btn-outline" data-role="cancel-history" data-id="${hEsc(h.id)}">បោះបង់</button>
+      </td>
+    </tr>`;
+}
+
+function saveHistoryEdit(id){
+  const entry = state.history.find(h=>h.id===id);
+  const row = document.querySelector('#historyBody tr[data-editing="1"]');
+  if(!entry || !row){ historyEditId = null; renderHistory(); return; }
+
+  const read = k => { const el = row.querySelector(`[data-ed="${k}"]`); return el ? String(el.value||'').trim() : ''; };
+  const next = { store: read('store'), date: read('date'), shift: read('shift'), auditor: read('auditor') };
+
+  if(!next.store){ showToast('សូមជ្រើសរើសហាង'); return; }
+  if(!next.date){ showToast('សូមបំពេញកាលបរិច្ឆេទ'); return; }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(next.date)){ showToast('ទម្រង់កាលបរិច្ឆេទត្រូវជា YYYY-MM-DD'); return; }
+  if(new Date(next.date+'T00:00:00').getTime() > Date.now() + 864e5){ showToast('កាលបរិច្ឆេទមិនអាចនៅអនាគតទេ'); return; }
+
+  const unchanged = ['store','date','shift','auditor'].every(k => String(entry[k]||'') === next[k]);
+  if(unchanged){ historyEditId = null; renderHistory(); showToast('គ្មានអ្វីផ្លាស់ប្ដូរ'); return; }
+
+  entry.store = next.store;
+  entry.date = next.date;
+  entry.month = next.date.slice(0,7);
+  entry.shift = next.shift;
+  entry.auditor = next.auditor;
+  // Mark it newer than the server copy so the sync keeps this version.
+  entry.savedAt = new Date().toISOString();
+
+  historyEditId = null;
+  persistHistory();          // wrapped: also pushes the change to the server
+  renderHistory();
+  renderTrend();
+  showToast('បានរក្សាទុកការកែ');
 }
 
 /* ============================================================
@@ -2041,9 +2161,53 @@ document.getElementById('btnDeleteFiltered').addEventListener('click', ()=>{
   renderHistory();
   showToast('បានលុបសវនកម្មដែលបានត្រង');
 });
+/* ---- row ticks and bulk actions ---- */
+document.getElementById('historyBody').addEventListener('change', e=>{
+  if(e.target.dataset.role!=='sel-history') return;
+  const id = e.target.dataset.id;
+  if(e.target.checked) historySel[id] = true; else delete historySel[id];
+  // Repaint the one row rather than the table, so a row being edited
+  // is not thrown away by ticking its box.
+  const tr = e.target.closest('tr');
+  if(tr && !tr.dataset.editing) tr.style.background = historySel[id] ? '#F3F7FF' : '';
+  renderHistorySelection();
+});
+
+document.getElementById('h_selAll').addEventListener('change', e=>{
+  const rows = filteredHistory();
+  if(e.target.checked) rows.forEach(h=>{ historySel[h.id] = true; });
+  else historySel = {};
+  renderHistory();
+});
+
+document.getElementById('btnClearSelection').addEventListener('click', ()=>{
+  historySel = {};
+  renderHistory();
+});
+
+document.getElementById('btnDeleteSelected').addEventListener('click', ()=>{
+  const picked = selectedHistory();
+  if(!picked.length){ showToast('មិនទាន់បានជ្រើសសវនកម្មណាទេ'); return; }
+  if(!confirm(`លុបសវនកម្មចំនួន ${picked.length} ដែលបានជ្រើសមែនទេ?`)) return;
+  picked.forEach(h=>{ deleteHistoryEntry(h.id); });
+  historySel = {};
+  renderHistory();
+  showToast(`បានលុបសវនកម្មចំនួន ${picked.length}`);
+});
+
 document.getElementById('historyBody').addEventListener('click', e=>{
-  if(e.target.dataset.role==='del-history'){
-    if(confirm('លុបសវនកម្មនេះ?')) deleteHistoryEntry(e.target.dataset.id);
+  const role = e.target.dataset.role;
+  const id = e.target.dataset.id;
+  if(role==='del-history'){
+    if(confirm('លុបសវនកម្មនេះ?')) deleteHistoryEntry(id);
+  } else if(role==='edit-history'){
+    historyEditId = id;
+    renderHistory();
+  } else if(role==='cancel-history'){
+    historyEditId = null;
+    renderHistory();
+  } else if(role==='save-history'){
+    saveHistoryEdit(id);
   }
 });
 
@@ -2904,11 +3068,11 @@ if(hadDraft && (state.store.store || state.store.date)) showToast('បានស�
 })();
 </script>
 
-<script src="/qc-settings-save.js?v=20261017d"></script>
-<script src="/qc-glossary.js?v=20261017d"></script>
-<script src="/qc-i18n-dict.js?v=20261017d"></script>
-<script src="/qc-i18n-dict2.js?v=20261017d"></script>
-<script src="/qc-i18n.js?v=20261017d"></script>
-<script src="/qc-print-report.js?v=20261017d"></script>
+<script src="/qc-settings-save.js?v=20261022a"></script>
+<script src="/qc-glossary.js?v=20261022a"></script>
+<script src="/qc-i18n-dict.js?v=20261022a"></script>
+<script src="/qc-i18n-dict2.js?v=20261022a"></script>
+<script src="/qc-i18n.js?v=20261022a"></script>
+<script src="/qc-print-report.js?v=20261022a"></script>
 </body>
 </html>

@@ -8,6 +8,7 @@ import {
 } from './ui';
 import { exportExcel, exportPdf, exportWord } from './exporters';
 import Records from './records';
+import Inspections from './inspections';
 import MasterData from './masterdata';
 import Approvals from './approvals';
 
@@ -16,6 +17,7 @@ const NAV = [
   { key: 'users', label: 'អ្នកប្រើប្រាស់', icon: '◉' },
   { key: 'roles', label: 'តួនាទី និងសិទ្ធិ', icon: '⚿' },
   { key: 'content', label: 'មាតិកា', icon: '✎' },
+  { key: 'inspections', label: 'សវនកម្ម', icon: '✓' },
   { key: 'reports', label: 'របាយការណ៍', icon: '▤' },
   { key: 'audit', label: 'កំណត់ហេតុសកម្មភាព', icon: '⌁' },
   { key: 'settings', label: 'ការកំណត់', icon: '⚙' },
@@ -118,13 +120,14 @@ export default function AdminPage() {
         </nav>
 
         <main style={S.main}>
-          {tab === 'dashboard' && <Dashboard data={data} allow={allow} go={setTab} />}
+          {tab === 'dashboard' && <Dashboard data={data} allow={allow} go={setTab} reload={load} toast={toast} />}
           {tab === 'users' && <Users data={data} allow={allow} reload={load} toast={toast} />}
           {tab === 'roles' && <Roles data={data} allow={allow} toast={toast} />}
           {tab === 'content' && <Content allow={allow} toast={toast} />}
           {tab === 'reports' && <Reports allow={allow} toast={toast} company={company} />}
           {tab === 'audit' && <Audit allow={allow} toast={toast} />}
           {tab === 'settings' && <Settings data={data} allow={allow} reload={load} toast={toast} />}
+          {tab === 'inspections' && <Inspections allow={allow} toast={toast} />}
           {tab === 'records' && <Records allow={allow} toast={toast} />}
           {tab === 'masterdata' && <MasterData allow={allow} toast={toast} />}
           {tab === 'approvals' && <Approvals allow={allow} toast={toast} />}
@@ -149,9 +152,172 @@ export default function AdminPage() {
   );
 }
 
+const BTN_SM = { padding: '5px 10px', fontSize: 12 };
+
+/* ---------------------- edit one inspection ----------------------- *
+ * Only the descriptive fields can be changed here. Scores come from the
+ * checklist and are shown read-only: an admin typing over a score would
+ * put the dashboard and the inspector's own record out of step, so a
+ * wrong score has to be fixed in the QC app where it was recorded.
+ * ------------------------------------------------------------------ */
+function InspectionEditor({ record, onClose, onSaved, toast }) {
+  const [form, setForm] = useState({
+    storeLabel: record.storeLabel || '',
+    inspectDate: record.inspectDate || '',
+    shift: record.shift || '',
+    auditorName: record.auditorName || '',
+    areaManager: record.areaManager || '',
+    contact: record.contact || ''
+  });
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const dirty = Object.keys(form).some(k => String(form[k] || '') !== String(record[k] || ''));
+
+  function close() {
+    if (dirty && !window.confirm('មានការផ្លាស់ប្ដូរមិនទាន់រក្សាទុក — ចាកចេញមែនទេ?')) return;
+    onClose();
+  }
+
+  async function save() {
+    setErr('');
+    setSaving(true);
+    try {
+      const r = await fetch('/api/admin/inspections/' + encodeURIComponent(record.id), {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...form, version: record.version })
+      });
+      const d = await r.json();
+      if (!d.ok) {
+        setErr(d.error || 'រក្សាទុកមិនបានសម្រេច');
+        return;
+      }
+      toast.push('បានរក្សាទុក', 'ok');
+      onSaved(d.record);
+    } catch (_) {
+      setErr('បណ្ដាញមានបញ្ហា — សូមព្យាយាមម្ដងទៀត');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const ro = { background: '#F8FAFC', color: '#64748B' };
+
+  return (
+    <Modal title="កែសវនកម្ម" onClose={close} width={640}
+      footer={<>
+        <Btn onClick={close} disabled={saving}>បោះបង់</Btn>
+        <Btn kind="blue" onClick={save} disabled={saving || !dirty}>
+          {saving ? 'កំពុងរក្សាទុក…' : 'រក្សាទុក'}
+        </Btn>
+      </>}>
+      {err && (
+        <div style={{
+          background: '#FEF2F2', border: '1px solid #FECACA', color: '#991B1B',
+          borderRadius: 10, padding: '10px 12px', fontSize: 13, lineHeight: 1.8, marginBottom: 14
+        }}>{err}</div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <Field label="ហាង" wide>
+          <Input value={form.storeLabel} onChange={e => set('storeLabel', e.target.value)} />
+        </Field>
+        <Field label="កាលបរិច្ឆេទ">
+          <Input type="date" value={form.inspectDate} onChange={e => set('inspectDate', e.target.value)} />
+        </Field>
+        <Field label="វេន">
+          <Input value={form.shift} onChange={e => set('shift', e.target.value)} placeholder="ព្រឹក / រសៀល / យប់" />
+        </Field>
+        <Field label="អ្នកត្រួតពិនិត្យ">
+          <Input value={form.auditorName} onChange={e => set('auditorName', e.target.value)} />
+        </Field>
+        <Field label="អ្នកគ្រប់គ្រងតំបន់">
+          <Input value={form.areaManager} onChange={e => set('areaManager', e.target.value)} />
+        </Field>
+        <Field label="ទំនាក់ទំនង" wide>
+          <Input value={form.contact} onChange={e => set('contact', e.target.value)} />
+        </Field>
+
+        <Field label="ពិន្ទុ (អានតែប៉ុណ្ណោះ)">
+          <Input value={`${record.totalScore} / ${record.totalMax}`} readOnly style={ro} />
+        </Field>
+        <Field label="កម្រិត (អានតែប៉ុណ្ណោះ)">
+          <Input value={`${record.pct}% · ${record.band || '—'}${record.autoFail ? ' · ធ្លាក់ស្វ័យប្រវត្តិ' : ''}`} readOnly style={ro} />
+        </Field>
+      </div>
+
+      <p style={{ margin: '14px 0 0', fontSize: 12.5, color: T.muted, lineHeight: 1.9 }}>
+        ពិន្ទុមកពីបញ្ជីត្រួតពិនិត្យ ដូច្នេះវាកែនៅទីនេះមិនបានទេ — បើពិន្ទុខុស សូមកែក្នុងកម្មវិធី QC។
+        អ៊ីម៉ែលអ្នកត្រួតពិនិត្យ <b>{record.auditorEmail || '—'}</b> និងកំណែ <b>{record.version}</b> ត្រូវរក្សាទុកដដែល។
+        រាល់ការកែត្រូវកត់ក្នុងកំណត់ហេតុសកម្មភាព។
+      </p>
+    </Modal>
+  );
+}
+
 /* ============================ DASHBOARD ============================ */
-function Dashboard({ data, allow, go }) {
+function Dashboard({ data, allow, go, reload, toast }) {
   const s = data.stats;
+  const canEditInsp = allow('inspections', 'edit');
+  const canDelInsp = allow('inspections', 'delete');
+
+  // Rows archived in this session, kept on screen so the action can be undone
+  // without hunting through the database for the record again.
+  const [archived, setArchived] = useState({});
+  const [editing, setEditing] = useState(null);     // the record being edited
+  const [loadingId, setLoadingId] = useState(null);
+  const [confirming, setConfirming] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  async function openEditor(row) {
+    setLoadingId(row.id);
+    try {
+      // Read the record fresh so the editor always carries the current
+      // version — that is what protects against overwriting someone else.
+      const r = await fetch('/api/admin/inspections/' + encodeURIComponent(row.id), { cache: 'no-store' });
+      const d = await r.json();
+      if (!d.ok) { toast.err(d.error || 'មិនអាចទាញកំណត់ត្រា'); return; }
+      setEditing(d.record);
+    } catch (_) {
+      toast.err('បណ្ដាញមានបញ្ហា');
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
+  async function archive(row) {
+    setBusy(true);
+    try {
+      const r = await fetch('/api/admin/inspections/' + encodeURIComponent(row.id), { method: 'DELETE' });
+      const d = await r.json();
+      if (!d.ok) { toast.err(d.error || 'លុបមិនបានសម្រេច'); return; }
+      setArchived(a => ({ ...a, [row.id]: true }));
+      setConfirming(null);
+      toast.push('បានផ្ទេរទៅប័ណ្ណសារ — អ្នកអាចស្ដារវិញបាន', 'ok');
+    } catch (_) {
+      toast.err('បណ្ដាញមានបញ្ហា');
+    } finally { setBusy(false); }
+  }
+
+  async function restore(row) {
+    setBusy(true);
+    try {
+      const r = await fetch('/api/admin/inspections/' + encodeURIComponent(row.id), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'restore' })
+      });
+      const d = await r.json();
+      if (!d.ok) { toast.err(d.error || 'ស្ដារមិនបានសម្រេច'); return; }
+      setArchived(a => { const n = { ...a }; delete n[row.id]; return n; });
+      toast.push('បានស្ដារឡើងវិញ', 'ok');
+    } catch (_) {
+      toast.err('បណ្ដាញមានបញ្ហា');
+    } finally { setBusy(false); }
+  }
+
   return (
     <>
       <SectionTitle title="ទិដ្ឋភាពរួម" sub={`ទិន្នន័យបច្ចុប្បន្ន · ខែ ${data.month}`} />
@@ -219,23 +385,70 @@ function Dashboard({ data, allow, go }) {
       </div>
 
       <Card style={{ marginTop: 14 }}>
-        <SectionTitle title="សវនកម្មថ្មីៗ" />
-        <Table head={['ហាង', 'កាលបរិច្ឆេទ', 'អ្នកត្រួតពិនិត្យ', { label: 'ពិន្ទុ', right: true }, { label: '%', right: true }, 'កម្រិត', 'រក្សាទុក']}>
+        <SectionTitle title="សវនកម្មថ្មីៗ"
+          sub={canEditInsp || canDelInsp ? 'ការលុបមិនបំផ្លាញទិន្នន័យទេ — វាផ្ទេរទៅប័ណ្ណសារ ហើយអាចស្ដារវិញបាន' : undefined} />
+        <Table minWidth={canEditInsp || canDelInsp ? 900 : 720}
+          head={['ហាង', 'កាលបរិច្ឆេទ', 'អ្នកត្រួតពិនិត្យ', { label: 'ពិន្ទុ', right: true }, { label: '%', right: true }, 'កម្រិត', 'រក្សាទុក']
+            .concat(canEditInsp || canDelInsp ? ['សកម្មភាព'] : [])}>
           {data.recent.length === 0
             ? <tr><Td>មិនទាន់មានសវនកម្ម</Td></tr>
-            : data.recent.map(r => (
-              <tr key={r.id}>
-                <Td>{r.store_label || '—'}</Td>
-                <Td>{r.inspect_date ? String(r.inspect_date).slice(0, 10) : '—'}</Td>
-                <Td>{r.auditor_name || r.auditor_email}</Td>
-                <Td right>{r.total_score} / {r.total_max}</Td>
-                <Td right>{r.pct}%</Td>
-                <Td>{r.auto_fail ? <Pill tone="bad">ធ្លាក់</Pill> : (r.band || '—')}</Td>
-                <Td>{fmtWhen(r.updated_at)}</Td>
-              </tr>
-            ))}
+            : data.recent.map(r => {
+              const gone = !!archived[r.id];
+              const dim = gone ? { opacity: .45, textDecoration: 'line-through' } : null;
+              return (
+                <tr key={r.id}>
+                  <Td style={dim}>{r.store_label || '—'}</Td>
+                  <Td style={dim}>{r.inspect_date ? String(r.inspect_date).slice(0, 10) : '—'}</Td>
+                  <Td style={dim}>{r.auditor_name || r.auditor_email}</Td>
+                  <Td right style={dim}>{r.total_score} / {r.total_max}</Td>
+                  <Td right style={dim}>{r.pct}%</Td>
+                  <Td style={dim}>{r.auto_fail ? <Pill tone="bad">ធ្លាក់</Pill> : (r.band || '—')}</Td>
+                  <Td style={dim}>{fmtWhen(r.updated_at)}</Td>
+                  {(canEditInsp || canDelInsp) && (
+                    <Td>
+                      {gone ? (
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', whiteSpace: 'nowrap' }}>
+                          <Pill tone="off">ប័ណ្ណសារ</Pill>
+                          <Btn kind="blue" style={BTN_SM} disabled={busy} onClick={() => restore(r)}>ស្ដារវិញ</Btn>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap' }}>
+                          {canEditInsp && (
+                            <Btn style={BTN_SM} disabled={loadingId === r.id} onClick={() => openEditor(r)}>
+                              {loadingId === r.id ? '…' : '✎ កែ'}
+                            </Btn>
+                          )}
+                          {canDelInsp && (
+                            <Btn kind="primary" style={BTN_SM} onClick={() => setConfirming(r)}>🗑 លុប</Btn>
+                          )}
+                        </div>
+                      )}
+                    </Td>
+                  )}
+                </tr>
+              );
+            })}
         </Table>
       </Card>
+
+      {editing && (
+        <InspectionEditor
+          record={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); reload(); }}
+          toast={toast}
+        />
+      )}
+
+      {confirming && (
+        <Confirm
+          danger
+          text={`លុបសវនកម្មរបស់ ${confirming.store_label || '—'} ថ្ងៃទី ${confirming.inspect_date ? String(confirming.inspect_date).slice(0, 10) : '—'} មែនទេ?`}
+          detail="កំណត់ត្រានឹងផ្ទេរទៅប័ណ្ណសារ មិនត្រូវបានលុបចោលពីមូលដ្ឋានទិន្នន័យទេ។ អ្នកអាចស្ដារវិញភ្លាមៗ ហើយសកម្មភាពនេះត្រូវកត់ក្នុងកំណត់ហេតុ។"
+          onNo={() => setConfirming(null)}
+          onYes={() => archive(confirming)}
+        />
+      )}
 
       <Card style={{ marginTop: 14 }}>
         <SectionTitle title="សកម្មភាពអ្នកគ្រប់គ្រងថ្មីៗ" />
