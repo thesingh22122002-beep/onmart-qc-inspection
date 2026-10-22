@@ -25,7 +25,7 @@
      root-relative paths resolve to nothing. Every asset must be absolute or
      the Khmer webfont silently fails to load — and without the font the
      browser cannot shape Khmer either, which is the very bug this fixes. */
-  var BUILD = '20261022f';        // bump on every release; also used for cache-busting
+  var BUILD = '20261022g';        // bump on every release; also used for cache-busting
   var ORIGIN = (location && location.origin) ? location.origin : '';
   var FONT_REG = ORIGIN + '/NotoSansKhmer-Regular.woff2';
   var FONT_BOLD = ORIGIN + '/NotoSansKhmer-Bold.woff2';
@@ -550,7 +550,11 @@
   /* ---------------------------- history ----------------------------- */
 
   function printHistory(mode) {
-    var rows = (window.filteredHistory ? window.filteredHistory() : []);
+    /* exportRows() honours the tick boxes in the table when any are
+       ticked, and otherwise falls back to the filters — the same rule
+       the Word and Excel buttons follow. */
+    var rows = window.exportRows ? window.exportRows()
+             : (window.filteredHistory ? window.filteredHistory() : []);
     if (!rows.length) { alert('គ្មានទិន្នន័យសម្រាប់របាយការណ៍ — សូមរក្សាទុកសវនកម្ម ឬពិនិត្យតម្រង។'); return; }
 
     var groups = {};

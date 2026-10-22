@@ -244,6 +244,8 @@ window.QC_I18N = Object.assign(window.QC_I18N || {}, {
   'រក្សាទុក': 'Save',
   'បោះបង់': 'Cancel',
   '📦 Word មួយហាងមួយឯកសារ (ZIP)': '📦 Word — one file per store (ZIP)',
+  'ការនាំចេញ Excel · Word · PDF នឹងប្រើតែជួរដែលបានជ្រើសនេះ':
+    'Excel, Word and PDF exports will cover only these selected rows',
   'កំពុងរៀបចំឯកសារ Word តាមហាង…': 'Preparing one Word file per store…',
   'លុបដែលបានជ្រើស': 'Delete selected',
   'សម្អាតការជ្រើស': 'Clear selection',

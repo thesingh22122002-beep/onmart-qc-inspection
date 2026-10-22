@@ -14,11 +14,11 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="/vendor/xlsx.full.min.js?v=20261022f"></script>
-<script src="/vendor/jszip.min.js?v=20261022f"></script>
-<script src="/vendor/jspdf.umd.min.js?v=20261022f"></script>
-<script src="/vendor/jspdf.plugin.autotable.min.js?v=20261022f"></script>
-<script src="/vendor/html2canvas.min.js?v=20261022f"></script>
+<script src="/vendor/xlsx.full.min.js?v=20261022g"></script>
+<script src="/vendor/jszip.min.js?v=20261022g"></script>
+<script src="/vendor/jspdf.umd.min.js?v=20261022g"></script>
+<script src="/vendor/jspdf.plugin.autotable.min.js?v=20261022g"></script>
+<script src="/vendor/html2canvas.min.js?v=20261022g"></script>
 <link rel="preload" href="/NotoSansKhmer-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:'ONMART Khmer';src:url('/NotoSansKhmer-Regular.woff2') format('woff2');
@@ -526,6 +526,7 @@ body{margin:0;background:var(--canvas);color:var(--text);font-family:var(--body)
       <div id="historySelBar" style="display:none;margin-top:14px;padding:10px 14px;border-radius:10px;
            background:#EEF4FF;border:1px solid #CBD9F5;align-items:center;gap:10px;flex-wrap:wrap;">
         <span id="historySelCount" style="font-weight:700;"></span>
+        <span id="historySelNote" style="font-size:12px;color:#334155;">ការនាំចេញ Excel · Word · PDF នឹងប្រើតែជួរដែលបានជ្រើសនេះ</span>
         <button class="btn btn-sm btn-danger" id="btnDeleteSelected">លុបដែលបានជ្រើស</button>
         <button class="btn btn-sm btn-outline" id="btnClearSelection">សម្អាតការជ្រើស</button>
       </div>
@@ -1388,6 +1389,21 @@ function renderHistory(){
 function selectedHistory(){
   return filteredHistory().filter(h=>historySel[h.id]);
 }
+
+/* What the export buttons should cover.
+
+   There are two ways to narrow things down and they used to disagree: the
+   store filter at the top decided what was exported, while the tick boxes
+   in the table only fed "Delete selected". Ticking one row and pressing
+   Export then produced every store, which is not what anyone means by it.
+
+   So: if any rows are ticked, the exports cover exactly those rows.
+   If none are ticked, they cover whatever the filters show, as before. */
+function exportRows(){
+  const picked = selectedHistory();
+  return picked.length ? picked : filteredHistory();
+}
+window.exportRows = exportRows;
 
 function renderHistorySelection(rows){
   rows = rows || filteredHistory();
@@ -2291,7 +2307,7 @@ function historyFileTag(){
   return m ? `${base}_${m}` : base;
 }
 function exportHistoryExcel(){
-  const rows = filteredHistory();
+  const rows = exportRows();
   if(rows.length===0){ showToast('គ្មានទិន្នន័យសវនកម្មដែលត្រូវនាំចេញ (សូមរក្សាទុកសវនកម្មជាមុនសិន)'); return; }
   const wb = XLSX.utils.book_new();
   const pillarTitles = Array.from(new Set(rows.flatMap(h=>h.pillarRows.map(r=>r.title.split('—')[0].trim()))));
@@ -2416,7 +2432,7 @@ function buildHistoryWordHtml(rows, photoIndex, loosePhotos){
 }
 
 async function exportHistoryWordByStore(){
-  const rows = filteredHistory();
+  const rows = exportRows();
   if(rows.length===0){ showToast('គ្មានទិន្នន័យសម្រាប់ការនាំចេញ (សូមរក្សាទុកសវនកម្មជាមុនសិន ឬពិនិត្យតម្រងវិញ)'); return; }
   // Photos first, indexed per inspection and per checklist item, so each
   // finding can carry its own evidence instead of a pile at the end.
@@ -2454,7 +2470,7 @@ document.getElementById('btnExportHistoryWord').addEventListener('click', export
 /* One Word file per store, collected in a single ZIP — for filing a report
    per shop rather than one long document covering all of them. */
 async function exportHistoryWordPerStoreZip(){
-  const rows = filteredHistory();
+  const rows = exportRows();
   if(rows.length===0){ showToast('គ្មានទិន្នន័យសម្រាប់ការនាំចេញ (សូមរក្សាទុកសវនកម្មជាមុនសិន ឬពិនិត្យតម្រងវិញ)'); return; }
   if(typeof JSZip === 'undefined'){ showToast('មិនអាចបង្កើត ZIP បានទេ — សូមប្រើប៊ូតុង Word ធម្មតា'); return; }
 
@@ -2507,7 +2523,7 @@ document.getElementById('btnExportHistoryWordZip').addEventListener('click', exp
 
 async function exportHistoryPdfByStore(){
   if(!window.jspdf){ showToast('ឧបករណ៍ PDF កំពុងផ្ទុក — សូមព្យាយាមម្តងទៀតបន្តិច'); return; }
-  const rows = filteredHistory();
+  const rows = exportRows();
   if(rows.length===0){ showToast('គ្មានទិន្នន័យសម្រាប់ការនាំចេញ (សូមរក្សាទុកសវនកម្មជាមុនសិន ឬពិនិត្យតម្រងវិញ)'); return; }
   const storeGroups = {};
   rows.forEach(h=>{ (storeGroups[h.store] = storeGroups[h.store]||[]).push(h); });
@@ -3237,11 +3253,11 @@ if(hadDraft && (state.store.store || state.store.date)) showToast('បានស�
 })();
 </script>
 
-<script src="/qc-settings-save.js?v=20261022f"></script>
-<script src="/qc-glossary.js?v=20261022f"></script>
-<script src="/qc-i18n-dict.js?v=20261022f"></script>
-<script src="/qc-i18n-dict2.js?v=20261022f"></script>
-<script src="/qc-i18n.js?v=20261022f"></script>
-<script src="/qc-print-report.js?v=20261022f"></script>
+<script src="/qc-settings-save.js?v=20261022g"></script>
+<script src="/qc-glossary.js?v=20261022g"></script>
+<script src="/qc-i18n-dict.js?v=20261022g"></script>
+<script src="/qc-i18n-dict2.js?v=20261022g"></script>
+<script src="/qc-i18n.js?v=20261022g"></script>
+<script src="/qc-print-report.js?v=20261022g"></script>
 </body>
 </html>
