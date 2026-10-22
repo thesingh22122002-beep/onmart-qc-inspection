@@ -5,7 +5,7 @@
    The version below must be bumped on every release. Changing it
    throws away the previous cache, which is what makes a new deploy
    actually reach a browser that has been running the old files. */
-const CACHE = 'onmart-qc-v11-20261022g';
+const CACHE = 'onmart-qc-v12-20261022h';
 
 const SHELL = [
   '/qc.html',

@@ -31,6 +31,17 @@ function clean(v, max = 200) {
   return String(v === undefined || v === null ? '' : v).trim().slice(0, max);
 }
 
+/* Every administrative correction carries a reason, and it is checked on the
+   server — hiding the field in the browser would not stop a direct request. */
+const REASON_MIN = 5;
+function reasonOf(body) {
+  const r = clean(body && body.reason, 500);
+  if (r.length < REASON_MIN) {
+    return { error: `សូមបញ្ជាក់មូលហេតុ (យ៉ាងតិច ${REASON_MIN} តួអក្សរ) / A reason of at least ${REASON_MIN} characters is required` };
+  }
+  return { reason: r };
+}
+
 /** The fields an admin may change. Scores stay read-only — those come
  *  from the checklist and must be corrected in the app, not typed over. */
 function editable(body) {
@@ -130,6 +141,9 @@ export async function PATCH(req, { params }) {
   if (!before) return json({ ok: false, error: 'រកមិនឃើញកំណត់ត្រា' }, 404);
   if (before.deleted) return json({ ok: false, error: 'កំណត់ត្រានេះត្រូវបានទុកក្នុងប័ណ្ណសារ — សូមស្ដារមុនកែ' }, 409);
 
+  const why = reasonOf(body);
+  if (why.error) return json({ ok: false, error: why.error, needsReason: true }, 400);
+
   const f = editable(body);
   const bad = validate(f, ymd(before.inspect_date));
   if (bad) return json({ ok: false, error: bad }, 400);
@@ -178,7 +192,7 @@ export async function PATCH(req, { params }) {
 
   await logAction(req, user, {
     action: 'update', module: 'inspections', target: id,
-    before: shape(before), after: shape(rows[0])
+    before: shape(before), after: shape(rows[0]), reason: why.reason
   });
 
   return json({ ok: true, record: shape(rows[0]) });
@@ -188,6 +202,11 @@ export async function PATCH(req, { params }) {
 export async function DELETE(req, { params }) {
   const { user, error } = await requirePermission('inspections', 'delete');
   if (error) return error;
+
+  let body = {};
+  try { body = await req.json(); } catch (_) { /* no body means no reason */ }
+  const why = reasonOf(body);
+  if (why.error) return json({ ok: false, error: why.error, needsReason: true }, 400);
 
   const id = String(params.id || '');
   const before = await loadOne(id);
@@ -203,7 +222,7 @@ export async function DELETE(req, { params }) {
 
   await logAction(req, user, {
     action: 'archive', module: 'inspections', target: id,
-    before: shape(before), after: rows[0] ? shape(rows[0]) : null
+    before: shape(before), after: rows[0] ? shape(rows[0]) : null, reason: why.reason
   });
 
   return json({ ok: true, record: rows[0] ? shape(rows[0]) : null });
@@ -219,6 +238,8 @@ export async function POST(req, { params }) {
   if (body.action && body.action !== 'restore') {
     return json({ ok: false, error: 'សកម្មភាពមិនស្គាល់' }, 400);
   }
+  const why = reasonOf(body);
+  if (why.error) return json({ ok: false, error: why.error, needsReason: true }, 400);
 
   const id = String(params.id || '');
   const before = await loadOne(id);
@@ -233,7 +254,7 @@ export async function POST(req, { params }) {
 
   await logAction(req, user, {
     action: 'restore', module: 'inspections', target: id,
-    before: shape(before), after: rows[0] ? shape(rows[0]) : null
+    before: shape(before), after: rows[0] ? shape(rows[0]) : null, reason: why.reason
   });
 
   return json({ ok: true, record: rows[0] ? shape(rows[0]) : null });

@@ -1,6 +1,14 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { T, Card, SectionTitle, Stat, Btn, Field, Input, Select, Pill, Table, Td, Modal } from './compat.js';
+import { T, Card, SectionTitle, Stat, Btn, Field, Input, Select, Textarea, Pill, Table, Td, Modal, fmtWhen } from './compat.js';
+
+const ACTION_LABEL = {
+  update: 'កែ / Edited',
+  archive: 'លុប (ប័ណ្ណសារ) / Archived',
+  restore: 'ស្ដារវិញ / Restored',
+  archive_bulk: 'លុបច្រើន / Bulk archived',
+  restore_bulk: 'ស្ដារច្រើន / Bulk restored'
+};
 
 /* ------------------------------------------------------------------ *
  * Admin · Inspections
@@ -32,6 +40,8 @@ export default function Inspections({ allow, toast }) {
   const [openingId, setOpeningId] = useState(null);
   const [confirm, setConfirm] = useState(null); // { kind, ids, label }
   const [busy, setBusy] = useState(false);
+  const [reason, setReason] = useState('');     // why this change is being made
+  const [history, setHistory] = useState(null); // { id, label, entries }
 
   const load = useCallback(() => {
     setLoading(true);
@@ -80,13 +90,25 @@ export default function Inspections({ allow, toast }) {
     finally { setOpeningId(null); }
   }
 
-  async function runBulk(kind, ids) {
+  async function openHistory(row) {
+    setOpeningId(row.id);
+    try {
+      const r = await fetch('/api/admin/inspections/' + encodeURIComponent(row.id) + '/history',
+        { cache: 'no-store' });
+      const d = await r.json();
+      if (!d.ok) { toast.err(d.error || 'មិនអាចទាញប្រវត្តិការផ្លាស់ប្ដូរ'); return; }
+      setHistory({ id: row.id, label: row.storeLabel + ' · ' + row.inspectDate, entries: d.entries });
+    } catch (_) { toast.err('បណ្ដាញមានបញ្ហា'); }
+    finally { setOpeningId(null); }
+  }
+
+  async function runBulk(kind, ids, why) {
     setBusy(true);
     try {
       const r = await fetch('/api/admin/inspections', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: kind, ids })
+        body: JSON.stringify({ action: kind, ids, reason: why })
       });
       const d = await r.json();
       if (!d.ok) { toast.err(d.error || 'សកម្មភាពមិនបានសម្រេច'); return; }
@@ -95,6 +117,7 @@ export default function Inspections({ allow, toast }) {
         ? `បានផ្ទេរទៅប័ណ្ណសារ ${n} កំណត់ត្រា`
         : `បានស្ដារឡើងវិញ ${n} កំណត់ត្រា`, 'ok');
       setConfirm(null);
+      setReason('');
       setSel({});
       load();
     } catch (_) { toast.err('បណ្ដាញមានបញ្ហា'); }
@@ -251,7 +274,9 @@ export default function Inspections({ allow, toast }) {
                             <Pill tone="off">ប័ណ្ណសារ</Pill>
                             {canEdit && (
                               <Btn kind="blue" style={BTN_SM} disabled={busy}
-                                onClick={() => runBulk('restore', [r.id])}>ស្ដារវិញ</Btn>
+                                onClick={() => setConfirm({ kind: 'restore', ids: [r.id], label: r.storeLabel })}>
+                                ស្ដារវិញ
+                              </Btn>
                             )}
                           </>
                         ) : (
@@ -266,6 +291,8 @@ export default function Inspections({ allow, toast }) {
                                 🗑 លុប
                               </Btn>
                             )}
+                            <Btn style={BTN_SM} disabled={openingId === r.id}
+                              onClick={() => openHistory(r)}>🕘 ប្រវត្តិ</Btn>
                           </>
                         )}
                       </div>
@@ -297,11 +324,12 @@ export default function Inspections({ allow, toast }) {
         <Modal
           title="សូមបញ្ជាក់"
           width={460}
-          onClose={() => setConfirm(null)}
+          onClose={() => { setConfirm(null); setReason(''); }}
           footer={<>
-            <Btn onClick={() => setConfirm(null)} disabled={busy}>បោះបង់</Btn>
-            <Btn kind={confirm.kind === 'archive' ? 'primary' : 'blue'} disabled={busy}
-              onClick={() => runBulk(confirm.kind, confirm.ids)}>
+            <Btn onClick={() => { setConfirm(null); setReason(''); }} disabled={busy}>បោះបង់</Btn>
+            <Btn kind={confirm.kind === 'archive' ? 'primary' : 'blue'}
+              disabled={busy || reason.trim().length < 5}
+              onClick={() => runBulk(confirm.kind, confirm.ids, reason.trim())}>
               {busy ? 'កំពុងដំណើរការ…' : 'បាទ/ចាស បន្ត'}
             </Btn>
           </>}>
@@ -320,6 +348,65 @@ export default function Inspections({ allow, toast }) {
               : 'កំណត់ត្រានឹងត្រឡប់មកបញ្ជីកំពុងប្រើវិញ។'}
             {' '}សកម្មភាពនេះត្រូវកត់ក្នុងកំណត់ហេតុសកម្មភាព។
           </p>
+
+          <div style={{ marginTop: 14 }}>
+            <Field label="មូលហេតុ (ត្រូវបំពេញ)">
+              <Textarea value={reason} onChange={e => setReason(e.target.value)}
+                placeholder="ឧ. កំណត់ត្រាស្ទួនពីការរក្សាទុកពីរដង" style={{ minHeight: 70 }} />
+            </Field>
+            <p style={{ margin: '6px 0 0', fontSize: 12, color: reason.trim().length < 5 ? '#B91C1C' : T.muted }}>
+              {reason.trim().length < 5
+                ? 'ត្រូវការយ៉ាងតិច ៥ តួអក្សរ — មូលហេតុនេះរក្សាទុកជាមួយកំណត់ហេតុ'
+                : 'មូលហេតុនេះនឹងរក្សាទុកជាមួយកំណត់ហេតុ'}
+            </p>
+          </div>
+        </Modal>
+      )}
+
+      {history && (
+        <Modal title="ប្រវត្តិការផ្លាស់ប្ដូរ" width={720} onClose={() => setHistory(null)}
+          footer={<Btn onClick={() => setHistory(null)}>បិទ</Btn>}>
+          <p style={{ margin: '0 0 12px', fontSize: 13, color: T.muted }}>{history.label}</p>
+          {history.entries.length === 0
+            ? <p style={{ margin: 0, fontSize: 13 }}>មិនទាន់មានការផ្លាស់ប្ដូរណាត្រូវបានកត់ត្រាទេ។</p>
+            : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {history.entries.map(e => (
+                  <div key={e.id} style={{
+                    border: '1px solid ' + T.line, borderRadius: 10, padding: '10px 12px', background: '#FBFCFD'
+                  }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <Pill tone={e.action === 'archive' ? 'danger' : e.action === 'restore' ? 'good' : 'info'}>
+                        {ACTION_LABEL[e.action] || e.action}
+                      </Pill>
+                      <b style={{ fontSize: 13 }}>{e.actor}</b>
+                      <span style={{ fontSize: 12, color: T.muted }}>{fmtWhen(e.at)}</span>
+                    </div>
+
+                    {e.changes.length > 0 && (
+                      <div style={{ marginTop: 8, fontSize: 12.5, lineHeight: 1.9 }}>
+                        {e.changes.map(c => (
+                          <div key={c.field}>
+                            <b>{c.label}:</b>{' '}
+                            <span style={{ color: '#B91C1C', textDecoration: 'line-through' }}>
+                              {String(c.from === '' || c.from === null || c.from === undefined ? '—' : c.from)}
+                            </span>
+                            {' → '}
+                            <span style={{ color: '#166534' }}>
+                              {String(c.to === '' || c.to === null || c.to === undefined ? '—' : c.to)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div style={{ marginTop: 8, fontSize: 12.5, color: e.reason ? T.text : T.muted }}>
+                      <b>មូលហេតុ:</b> {e.reason || '— (កត់ត្រាមុនពេលតម្រូវឱ្យមានមូលហេតុ)'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
         </Modal>
       )}
     </>
@@ -342,9 +429,11 @@ function InspectionEditor({ record, onClose, onSaved, toast }) {
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+  const [why, setWhy] = useState('');
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const dirty = Object.keys(form).some(k => String(form[k] || '') !== String(record[k] || ''));
+  const reasonOk = why.trim().length >= 5;
 
   function close() {
     if (dirty && !window.confirm('មានការផ្លាស់ប្ដូរមិនទាន់រក្សាទុក — ចាកចេញមែនទេ?')) return;
@@ -358,7 +447,7 @@ function InspectionEditor({ record, onClose, onSaved, toast }) {
       const r = await fetch('/api/admin/inspections/' + encodeURIComponent(record.id), {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ...form, version: record.version })
+        body: JSON.stringify({ ...form, version: record.version, reason: why.trim() })
       });
       const d = await r.json();
       if (!d.ok) { setErr(d.error || 'រក្សាទុកមិនបានសម្រេច'); return; }
@@ -375,7 +464,7 @@ function InspectionEditor({ record, onClose, onSaved, toast }) {
     <Modal title="កែសវនកម្ម" onClose={close} width={640}
       footer={<>
         <Btn onClick={close} disabled={saving}>បោះបង់</Btn>
-        <Btn kind="blue" onClick={save} disabled={saving || !dirty}>
+        <Btn kind="blue" onClick={save} disabled={saving || !dirty || !reasonOk}>
           {saving ? 'កំពុងរក្សាទុក…' : 'រក្សាទុក'}
         </Btn>
       </>}>
@@ -412,7 +501,18 @@ function InspectionEditor({ record, onClose, onSaved, toast }) {
           <Input value={`${record.pct}% · ${record.band || '—'}${record.autoFail ? ' · ធ្លាក់ស្វ័យប្រវត្តិ' : ''}`}
             readOnly style={ro} />
         </Field>
+
+        <Field label="មូលហេតុនៃការកែ (ត្រូវបំពេញ)" wide>
+          <Textarea value={why} onChange={e => setWhy(e.target.value)}
+            placeholder="ឧ. ហាងជ្រើសខុសពេលធ្វើសវនកម្ម" style={{ minHeight: 70 }} />
+        </Field>
       </div>
+
+      <p style={{ margin: '6px 0 0', fontSize: 12, color: reasonOk ? T.muted : '#B91C1C' }}>
+        {reasonOk
+          ? 'មូលហេតុនេះនឹងរក្សាទុកក្នុងប្រវត្តិការផ្លាស់ប្ដូររបស់កំណត់ត្រានេះ'
+          : 'ត្រូវការមូលហេតុយ៉ាងតិច ៥ តួអក្សរ មុនពេលរក្សាទុក'}
+      </p>
 
       <p style={{ margin: '14px 0 0', fontSize: 12.5, color: T.muted, lineHeight: 1.9 }}>
         ពិន្ទុមកពីបញ្ជីត្រួតពិនិត្យ ដូច្នេះវាកែនៅទីនេះមិនបានទេ — បើពិន្ទុខុស សូមកែក្នុងកម្មវិធី QC។

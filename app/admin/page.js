@@ -26,7 +26,11 @@ const NAV = [
   { key: 'approvals', label: 'ការអនុម័ត', icon: '✓' }
 ];
 
-const ROLE_LABEL = { super_admin: 'អ្នកគ្រប់គ្រងកំពូល', admin: 'អ្នកគ្រប់គ្រង', qc_officer: 'មន្ត្រី QC' };
+const ROLE_LABEL = {
+  super_admin: 'អ្នកគ្រប់គ្រងកំពូល', admin: 'អ្នកគ្រប់គ្រង',
+  qc_supervisor: 'អ្នកគ្រប់គ្រង QC', inspector: 'អ្នកត្រួតពិនិត្យ',
+  management: 'ថ្នាក់ដឹកនាំ', qc_officer: 'មន្ត្រី QC'
+};
 const MODULE_LABEL = {
   dashboard: 'ផ្ទាំងគ្រប់គ្រង', users: 'អ្នកប្រើប្រាស់', roles: 'តួនាទី និងសិទ្ធិ',
   content: 'មាតិកា', reports: 'របាយការណ៍', audit: 'កំណត់ហេតុ', settings: 'ការកំណត់', inspections: 'សវនកម្ម'

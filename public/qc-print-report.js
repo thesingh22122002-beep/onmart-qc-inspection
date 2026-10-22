@@ -25,7 +25,7 @@
      root-relative paths resolve to nothing. Every asset must be absolute or
      the Khmer webfont silently fails to load — and without the font the
      browser cannot shape Khmer either, which is the very bug this fixes. */
-  var BUILD = '20261022g';        // bump on every release; also used for cache-busting
+  var BUILD = '20261022h';        // bump on every release; also used for cache-busting
   var ORIGIN = (location && location.origin) ? location.origin : '';
   var FONT_REG = ORIGIN + '/NotoSansKhmer-Regular.woff2';
   var FONT_BOLD = ORIGIN + '/NotoSansKhmer-Bold.woff2';

@@ -14,7 +14,10 @@ export async function middleware(req) {
     url.search = '';
     return NextResponse.redirect(url);
   }
-  if (req.nextUrl.pathname === '/admin' && !['super_admin','admin'].includes(s.role)) {
+  // Must match ADMIN_AREA_ROLES in lib/admin.js: the page gate and the API
+  // gate have to agree, or a supervisor sees a page whose data never loads.
+  if (req.nextUrl.pathname === '/admin' &&
+      !['super_admin','admin','qc_supervisor','management'].includes(s.role)) {
     const url = req.nextUrl.clone();
     url.pathname = '/app';
     url.search = '';

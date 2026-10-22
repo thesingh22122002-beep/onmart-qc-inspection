@@ -1,11 +1,11 @@
 import { sql } from '../../../../lib/db';
-import { requirePermission, permissionMap, settingsMap, MODULES, ALL_ROLES } from '../../../../lib/admin';
+import { requireAdminArea, permissionMap, settingsMap, MODULES, ALL_ROLES } from '../../../../lib/admin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const { user, error } = await requirePermission('dashboard', 'view');
+  const { user, error } = await requireAdminArea();
   if (error) return error;
 
   const month = new Date().toISOString().slice(0, 7);

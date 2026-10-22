@@ -47,7 +47,9 @@ export async function GET() {
   const body = {
     ok: true,
     user: { email: s.email, name, role, active },
-    isAdmin: role === 'admin' || role === 'super_admin',
+    // Whether the admin area should be offered at all — the same set the
+    // middleware and the API gate use.
+    isAdmin: ['super_admin', 'admin', 'qc_supervisor', 'management'].includes(role),
     roleRefreshed: refreshed
   };
 

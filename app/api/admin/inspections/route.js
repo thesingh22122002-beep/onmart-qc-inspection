@@ -175,6 +175,15 @@ export async function POST(req) {
   const { user, error } = await requirePermission('inspections', action === 'archive' ? 'delete' : 'edit');
   if (error) return error;
 
+  // A bulk change needs a reason just as a single one does.
+  const reason = String(body.reason === undefined || body.reason === null ? '' : body.reason).trim().slice(0, 500);
+  if (reason.length < 5) {
+    return json({
+      ok: false, needsReason: true,
+      error: 'សូមបញ្ជាក់មូលហេតុ (យ៉ាងតិច ៥ តួអក្សរ) / A reason of at least 5 characters is required'
+    }, 400);
+  }
+
   const ids = Array.isArray(body.ids) ? body.ids.map(String).filter(Boolean).slice(0, 500) : [];
   if (!ids.length) return json({ ok: false, error: 'មិនទាន់បានជ្រើសកំណត់ត្រាណាទេ' }, 400);
 
@@ -192,7 +201,8 @@ export async function POST(req) {
     module: 'inspections',
     target: changed.length === 1 ? changed[0] : changed.length + ' records',
     before: { ids, action },
-    after: { changed }
+    after: { changed },
+    reason
   });
 
   return json({ ok: true, changed, skipped: ids.filter(id => changed.indexOf(id) < 0) });
