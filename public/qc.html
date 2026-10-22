@@ -14,11 +14,11 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="/vendor/xlsx.full.min.js?v=20261022b"></script>
-<script src="/vendor/jszip.min.js?v=20261022b"></script>
-<script src="/vendor/jspdf.umd.min.js?v=20261022b"></script>
-<script src="/vendor/jspdf.plugin.autotable.min.js?v=20261022b"></script>
-<script src="/vendor/html2canvas.min.js?v=20261022b"></script>
+<script src="/vendor/xlsx.full.min.js?v=20261022c"></script>
+<script src="/vendor/jszip.min.js?v=20261022c"></script>
+<script src="/vendor/jspdf.umd.min.js?v=20261022c"></script>
+<script src="/vendor/jspdf.plugin.autotable.min.js?v=20261022c"></script>
+<script src="/vendor/html2canvas.min.js?v=20261022c"></script>
 <link rel="preload" href="/NotoSansKhmer-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:'ONMART Khmer';src:url('/NotoSansKhmer-Regular.woff2') format('woff2');
@@ -931,12 +931,42 @@ function saveCurrentInspection(){
     savedAt: new Date().toISOString(),
   };
   snapshot.photoItems = Object.keys(state.photos).filter(k => (state.photos[k]||[]).length);
-  state.history.push(snapshot);
+
+  /* One store, one date, one shift is one audit. Saving twice used to
+     create a second record with a new id, and every per-store report
+     then counted the same visit more than once. Offer to update the
+     record that is already there instead. */
+  const twin = state.history.find(h =>
+    h.store === snapshot.store &&
+    h.date === snapshot.date &&
+    String(h.shift || '') === String(snapshot.shift || ''));
+
+  let savedId = snapshot.id;
+  if(twin){
+    const replace = confirm(
+      'មានសវនកម្មសម្រាប់ហាងនេះ ថ្ងៃនេះ និងវេននេះរួចហើយ។\n\n' +
+      'ចុច OK — ធ្វើបច្ចុប្បន្នភាពកំណត់ត្រាចាស់ (មិនបង្កើតជួរស្ទួន)\n' +
+      'ចុច Cancel — រក្សាទុកជាសវនកម្មដាច់ដោយឡែកមួយទៀត');
+    if(replace){
+      savedId = twin.id;                 // keep the id so the server updates that row
+      snapshot.id = twin.id;
+      Object.keys(twin).forEach(k => { delete twin[k]; });
+      Object.assign(twin, snapshot);
+    } else {
+      state.history.push(snapshot);
+    }
+  } else {
+    state.history.push(snapshot);
+  }
+
   persistHistory();
-  uploadPhotosFor(snapshot.id);
+  uploadPhotosFor(savedId);
   renderHistory();
+  renderTrend();
   clearDraft();
-  showToast('សវនកម្មត្រូវបានរក្សាទុកក្នុងប្រវត្តិ');
+  showToast(twin && savedId === twin.id
+    ? 'បានធ្វើបច្ចុប្បន្នភាពសវនកម្មដែលមានស្រាប់'
+    : 'សវនកម្មត្រូវបានរក្សាទុកក្នុងប្រវត្តិ');
 }
 /* Evidence photos are stored separately from the inspection record so the
    record itself stays small. They are replaced wholesale on each save. */
@@ -3081,11 +3111,11 @@ if(hadDraft && (state.store.store || state.store.date)) showToast('បានស�
 })();
 </script>
 
-<script src="/qc-settings-save.js?v=20261022b"></script>
-<script src="/qc-glossary.js?v=20261022b"></script>
-<script src="/qc-i18n-dict.js?v=20261022b"></script>
-<script src="/qc-i18n-dict2.js?v=20261022b"></script>
-<script src="/qc-i18n.js?v=20261022b"></script>
-<script src="/qc-print-report.js?v=20261022b"></script>
+<script src="/qc-settings-save.js?v=20261022c"></script>
+<script src="/qc-glossary.js?v=20261022c"></script>
+<script src="/qc-i18n-dict.js?v=20261022c"></script>
+<script src="/qc-i18n-dict2.js?v=20261022c"></script>
+<script src="/qc-i18n.js?v=20261022c"></script>
+<script src="/qc-print-report.js?v=20261022c"></script>
 </body>
 </html>

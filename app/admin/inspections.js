@@ -102,6 +102,10 @@ export default function Inspections({ allow, toast }) {
   }
 
   const showingArchived = filters.status === 'archived';
+  const showingDupes = filters.status === 'duplicates';
+
+  // In the duplicates view, every record except the newest of each group.
+  const extraCopies = showingDupes ? rows.filter(r => !r.keep).map(r => r.id) : [];
 
   return (
     <>
@@ -143,6 +147,7 @@ export default function Inspections({ allow, toast }) {
               <option value="active">កំពុងប្រើ</option>
               <option value="archived">ប័ណ្ណសារ</option>
               <option value="all">ទាំងអស់</option>
+              <option value="duplicates">ជួរស្ទួន</option>
             </Select>
           </Field>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
@@ -151,6 +156,27 @@ export default function Inspections({ allow, toast }) {
           </div>
         </div>
       </Card>
+
+      {showingDupes && (
+        <div style={{
+          marginTop: 14, padding: '12px 14px', borderRadius: 10,
+          background: '#FFFBEB', border: '1px solid #FDE68A', lineHeight: 1.9, fontSize: 13
+        }}>
+          <b>ជួរស្ទួន៖ {data ? data.groups : '—'} ក្រុម · សវនកម្មលើស {data ? data.extra : '—'}</b>
+          <div style={{ color: T.muted, fontSize: 12.5 }}>
+            ហាងមួយ ថ្ងៃមួយ វេនមួយ គួរមានសវនកម្មតែមួយ។ ច្បាប់ចម្លងលើសធ្វើឱ្យពិន្ទុមធ្យមតាមហាង
+            និងរបាយការណ៍ខុសពីការពិត។ ជួរដែលសម្គាល់ថា <b>ទុកទុក</b> គឺជាកំណត់ត្រាថ្មីបំផុតក្នុងក្រុម។
+          </div>
+          {canDelete && extraCopies.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <Btn kind="primary" style={BTN_SM} disabled={busy}
+                onClick={() => setConfirm({ kind: 'archive', ids: extraCopies, dupes: true })}>
+                ទុកតែថ្មីបំផុត — ផ្ទេរច្បាប់ចម្លងលើស {extraCopies.length} ទៅប័ណ្ណសារ
+              </Btn>
+            </div>
+          )}
+        </div>
+      )}
 
       {selIds.length > 0 && (
         <div style={{
@@ -186,8 +212,12 @@ export default function Inspections({ allow, toast }) {
               ? <tr><Td colSpan={11}>គ្មានកំណត់ត្រាត្រូវនឹងតម្រង</Td></tr>
               : rows.map(r => {
                 const ticked = !!sel[r.id];
+                const dupExtra = showingDupes && !r.keep;
                 return (
-                  <tr key={r.id} style={ticked ? { background: '#F3F7FF' } : undefined}>
+                  <tr key={r.id} style={
+                    ticked ? { background: '#F3F7FF' }
+                      : dupExtra ? { background: '#FFF7ED' }
+                        : undefined}>
                     <Td>
                       <input type="checkbox" checked={ticked}
                         onChange={e => setSel(s => {
@@ -196,7 +226,16 @@ export default function Inspections({ allow, toast }) {
                           return n;
                         })} />
                     </Td>
-                    <Td>{r.storeLabel || '—'}</Td>
+                    <Td>
+                      {r.storeLabel || '—'}
+                      {showingDupes && (
+                        <span style={{ marginLeft: 8 }}>
+                          {r.keep
+                            ? <Pill tone="good">ទុកទុក</Pill>
+                            : <Pill tone="warn">ច្បាប់ចម្លងលើស</Pill>}
+                        </span>
+                      )}
+                    </Td>
                     <Td>{r.inspectDate || '—'}</Td>
                     <Td>{r.shift || '—'}</Td>
                     <Td>{r.auditorName || r.auditorEmail || '—'}</Td>
@@ -267,11 +306,13 @@ export default function Inspections({ allow, toast }) {
             </Btn>
           </>}>
           <p style={{ margin: 0, fontSize: 14, lineHeight: 1.9 }}>
-            {confirm.kind === 'archive'
-              ? (confirm.ids.length === 1
-                ? `លុបសវនកម្មរបស់ ${confirm.label || '—'} មែនទេ?`
-                : `លុបសវនកម្មចំនួន ${confirm.ids.length} ដែលបានជ្រើសមែនទេ?`)
-              : `ស្ដារកំណត់ត្រាចំនួន ${confirm.ids.length} ឡើងវិញមែនទេ?`}
+            {confirm.dupes
+              ? `ផ្ទេរច្បាប់ចម្លងលើសចំនួន ${confirm.ids.length} ទៅប័ណ្ណសារមែនទេ? កំណត់ត្រាថ្មីបំផុតនៃក្រុមនីមួយៗនៅដដែល។`
+              : confirm.kind === 'archive'
+                ? (confirm.ids.length === 1
+                  ? `លុបសវនកម្មរបស់ ${confirm.label || '—'} មែនទេ?`
+                  : `លុបសវនកម្មចំនួន ${confirm.ids.length} ដែលបានជ្រើសមែនទេ?`)
+                : `ស្ដារកំណត់ត្រាចំនួន ${confirm.ids.length} ឡើងវិញមែនទេ?`}
           </p>
           <p style={{ margin: '10px 0 0', fontSize: 12.5, color: T.muted, lineHeight: 1.8 }}>
             {confirm.kind === 'archive'

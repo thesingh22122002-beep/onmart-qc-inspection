@@ -55,7 +55,48 @@ export async function GET(req) {
   const store = (searchParams.get('store') || '').trim();
   const month = (searchParams.get('month') || '').trim();
   const auditor = (searchParams.get('auditor') || '').trim();
-  const status = (searchParams.get('status') || 'active').trim();   // active | archived | all
+  const status = (searchParams.get('status') || 'active').trim();   // active | archived | all | duplicates
+
+  // One store, one date, one shift is one visit. Anything beyond that is a
+  // record of the same visit saved twice, and it inflates every per-store
+  // average. This view gathers those groups so they can be tidied up.
+  if (status === 'duplicates') {
+    const dupes = await sql`
+      WITH ranked AS (
+        SELECT id, store_label, inspect_date, month, shift, auditor_name, auditor_email,
+               total_score, total_max, pct, band, auto_fail, deleted, version, updated_at,
+               jsonb_array_length(COALESCE(faults, '[]'::jsonb)) AS fault_count,
+               count(*) OVER w AS group_size,
+               -- Which copy to keep is decided by when the record was first
+               -- created, not by updated_at: an admin editing, archiving or
+               -- restoring a row bumps updated_at, which would otherwise
+               -- promote an old copy to "newest" and keep the wrong one.
+               row_number() OVER (PARTITION BY store_label, inspect_date, COALESCE(shift,'')
+                                  ORDER BY created_at DESC NULLS LAST, updated_at DESC, id DESC
+                                 ) AS rank_in_group
+          FROM inspections
+         WHERE deleted = false
+        WINDOW w AS (PARTITION BY store_label, inspect_date, COALESCE(shift,''))
+      )
+      SELECT * FROM ranked
+       WHERE group_size > 1
+       ORDER BY store_label, inspect_date DESC, rank_in_group`;
+
+    return json({
+      ok: true,
+      rows: dupes.map(r => Object.assign(shape(r), {
+        groupKey: [r.store_label, ymd(r.inspect_date), r.shift || ''].join(' · '),
+        groupSize: Number(r.group_size),
+        rankInGroup: Number(r.rank_in_group),
+        keep: Number(r.rank_in_group) === 1
+      })),
+      total: dupes.length,
+      groups: new Set(dupes.map(r => [r.store_label, ymd(r.inspect_date), r.shift || ''].join('|'))).size,
+      extra: dupes.filter(r => Number(r.rank_in_group) > 1).length,
+      page: 1, pageSize: dupes.length || 1, pages: 1,
+      stores: [], months: [], auditors: []
+    });
+  }
 
   const page = Math.max(1, Number(searchParams.get('page')) || 1);
   const pageSize = Math.min(100, Math.max(5, Number(searchParams.get('pageSize')) || 25));
