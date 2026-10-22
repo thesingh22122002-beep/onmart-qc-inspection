@@ -14,11 +14,11 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="/vendor/xlsx.full.min.js?v=20261022e"></script>
-<script src="/vendor/jszip.min.js?v=20261022e"></script>
-<script src="/vendor/jspdf.umd.min.js?v=20261022e"></script>
-<script src="/vendor/jspdf.plugin.autotable.min.js?v=20261022e"></script>
-<script src="/vendor/html2canvas.min.js?v=20261022e"></script>
+<script src="/vendor/xlsx.full.min.js?v=20261022f"></script>
+<script src="/vendor/jszip.min.js?v=20261022f"></script>
+<script src="/vendor/jspdf.umd.min.js?v=20261022f"></script>
+<script src="/vendor/jspdf.plugin.autotable.min.js?v=20261022f"></script>
+<script src="/vendor/html2canvas.min.js?v=20261022f"></script>
 <link rel="preload" href="/NotoSansKhmer-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:'ONMART Khmer';src:url('/NotoSansKhmer-Regular.woff2') format('woff2');
@@ -302,12 +302,18 @@ body{margin:0;background:var(--canvas);color:var(--text);font-family:var(--body)
   max-height:190px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;
   padding:6px;background:#FBFBFC;display:flex;flex-direction:column;gap:2px;
 }
-.store-picker-item{
-  display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;font-size:12.5px;cursor:pointer;
+/* `.field label` further up sets display:block and uppercase, and it wins on
+   specificity over a plain .store-picker-item rule — which is what pushed the
+   tick box away from its store name. Match the container as well so these rows
+   keep their own layout. */
+.store-picker label.store-picker-item{
+  display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;
+  font-size:12.5px;cursor:pointer;font-weight:400;text-transform:none;
+  letter-spacing:normal;color:var(--text);margin-bottom:0;
 }
-.store-picker-item:hover{background:#F0F1F3;}
-.store-picker-item input{margin:0;flex:none;}
-.store-picker-item .spn{flex:1;}
+.store-picker label.store-picker-item:hover{background:#F0F1F3;}
+.store-picker label.store-picker-item input{margin:0;flex:none;width:16px;height:16px;}
+.store-picker label.store-picker-item .spn{flex:1;min-width:0;}
 .store-picker-count{font-family:var(--mono);font-size:10.5px;color:var(--muted);background:#EEF0F2;padding:1px 7px;border-radius:10px;flex:none;}
 .store-picker-empty{padding:14px;color:var(--muted);font-size:12.5px;text-align:center;}
 
@@ -514,6 +520,7 @@ body{margin:0;background:var(--canvas);color:var(--text);font-family:var(--body)
       <div class="export-btns" style="margin-top:4px;">
         <button class="btn btn-amber" id="btnExportHistoryXlsx">⬇ នាំចេញ Excel (តាមតម្រង)</button>
         <button class="btn btn-outline" id="btnExportHistoryWord">📝 របាយការណ៍ Word (ហាងដែលបានជ្រើស)</button>
+        <button class="btn btn-outline" id="btnExportHistoryWordZip">📦 Word មួយហាងមួយឯកសារ (ZIP)</button>
         <button class="btn btn-outline" id="btnExportHistoryPdf">📄 របាយការណ៍ PDF (ហាងដែលបានជ្រើស)</button>
       </div>
       <div id="historySelBar" style="display:none;margin-top:14px;padding:10px 14px;border-radius:10px;
@@ -1320,6 +1327,28 @@ function storeLabel(code){
   const s = state.stores.find(st=>`${st.code} — ${st.name}`===code || st.code===code);
   return s ? `${s.code} — ${s.name}` : code;
 }
+/* The chosen stores and month are remembered on this device, so a reload,
+   a tab switch or a sync does not quietly throw the choice away and send
+   the reports back to "all stores". */
+const HISTORY_FILTER_KEY = 'qc_history_filter_v1';
+
+function loadHistoryFilter(){
+  try{
+    const raw = localStorage.getItem(HISTORY_FILTER_KEY);
+    if(!raw) return;
+    const f = JSON.parse(raw);
+    if(f && typeof f === 'object'){
+      state.historyFilter.stores = Array.isArray(f.stores) ? f.stores.filter(s=>typeof s === 'string') : [];
+      state.historyFilter.month = typeof f.month === 'string' ? f.month : '';
+    }
+  }catch(e){ /* a corrupt value simply means no saved filter */ }
+}
+
+function persistHistoryFilter(){
+  try{ localStorage.setItem(HISTORY_FILTER_KEY, JSON.stringify(state.historyFilter)); }
+  catch(e){ /* storage full or blocked — the filter still works for this visit */ }
+}
+
 function renderStorePicker(){
   const picker = document.getElementById('h_store_picker');
   const storesInHistory = Array.from(new Set(state.history.map(h=>h.store))).sort();
@@ -2166,19 +2195,27 @@ document.getElementById('h_store_picker').addEventListener('change', e=>{
   } else {
     state.historyFilter.stores = state.historyFilter.stores.filter(s=>s!==store);
   }
+  persistHistoryFilter();
   renderHistory();
 });
 document.getElementById('btnSelectAllStores').addEventListener('click', ()=>{
   state.historyFilter.stores = Array.from(new Set(state.history.map(h=>h.store)));
+  persistHistoryFilter();
   renderHistory();
 });
 document.getElementById('btnClearStoreSelection').addEventListener('click', ()=>{
   state.historyFilter.stores = [];
+  persistHistoryFilter();
   renderHistory();
 });
-document.getElementById('h_month').addEventListener('change', e=>{ state.historyFilter.month = e.target.value; renderHistory(); });
+document.getElementById('h_month').addEventListener('change', e=>{
+  state.historyFilter.month = e.target.value;
+  persistHistoryFilter();
+  renderHistory();
+});
 document.getElementById('btnClearHistoryFilter').addEventListener('click', ()=>{
   state.historyFilter = {stores:[], month:''};
+  persistHistoryFilter();
   renderHistory();
 });
 document.getElementById('btnDeleteFiltered').addEventListener('click', ()=>{
@@ -2290,6 +2327,94 @@ document.getElementById('btnExportHistoryXlsx').addEventListener('click', export
 /* ============================================================
    EXPORT — Word / PDF consolidated report BY STORE (all saved audits for that store)
    ============================================================ */
+/* The document body, built from whichever audits are handed in. Taking it
+   out of the download function lets the same builder produce one combined
+   report or one report per store, with no second copy of the layout. */
+function buildHistoryWordHtml(rows, photoIndex, loosePhotos){
+    const storeGroups = {};
+    rows.forEach(h=>{ (storeGroups[h.store] = storeGroups[h.store]||[]).push(h); });
+    const storeNames = Object.keys(storeGroups).sort();
+
+    const styles = wordBlockStyles() + `
+      body{font-family:'Khmer OS','Noto Sans Khmer',Calibri,Arial,sans-serif;color:#181B21;}
+      h1{color:#007DFF;font-size:22px;margin-bottom:2px;}
+      h2{color:#12151B;font-size:16px;border-bottom:2px solid #12151B;padding-bottom:4px;margin-top:24px;}
+      h3{color:#12151B;font-size:13px;margin-top:18px;}
+      table{border-collapse:collapse;width:100%;margin-top:8px;}
+      th,td{border:1px solid #DADDE2;padding:6px 8px;font-size:11px;text-align:left;}
+      th{background:#12151B;color:#fff;}
+      tr.critical td{color:#CF4331;font-weight:bold;}
+      tr.warning td{color:#C98A1B;}
+      .meta{font-size:12px;color:#444;margin-bottom:10px;}
+      .badge{display:inline-block;padding:3px 10px;border-radius:4px;font-weight:bold;color:#fff;}
+      .pass{background:#2E8B57;} .fail{background:#CF4331;}
+    `;
+    let html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><meta charset="utf-8"><title>របាយការណ៍ប្រវត្តិសវនកម្មតាមហាង</title><style>${styles}</style></head><body>`;
+    html += storeNames.length>1
+      ? wordLogoHtml() + `<h1>របាយការណ៍ប្រវត្តិសវនកម្មចម្រុះហាង — ON MART</h1>`
+      : wordLogoHtml() + `<h1>របាយការណ៍ប្រវត្តិសវនកម្មតាមហាង — ON MART</h1>`;
+    html += `<div class="meta">ចំនួនហាង៖ <b>${storeNames.length}</b> &nbsp; ចំនួនសវនកម្មសរុប៖ <b>${rows.length}</b>${state.historyFilter.month?` &nbsp; ខែ៖ <b>${state.historyFilter.month}</b>`:''}</div>`;
+
+    if(storeNames.length>1){
+      html += `<h2>សេចក្តីសង្ខេបចម្រុះហាង</h2><table><tr><th>ហាង</th><th>ចំនួនសវនកម្ម</th><th>ពិន្ទុមធ្យម %</th><th>ចំនួនធ្លាក់ស្វ័យប្រវត្តិ</th></tr>`;
+      storeNames.forEach(s=>{
+        const arr = storeGroups[s];
+        const avg = arr.reduce((sum,h)=>sum+h.pct,0)/arr.length*100;
+        const fails = arr.filter(h=>h.autoFail).length;
+        html += `<tr><td>${s}</td><td>${arr.length}</td><td>${avg.toFixed(1)}%</td><td>${fails}</td></tr>`;
+      });
+      html += `</table>`;
+    }
+
+    storeNames.forEach((s, idx)=>{
+      if(idx>0) html += `<br clear=all style='mso-special-character:line-break;page-break-before:always'>`;
+      const arr = storeGroups[s].slice().sort((a,b)=>a.date.localeCompare(b.date));
+      html += `<h2>ហាង៖ ${s}</h2>`;
+      html += `<table><tr><th>កាលបរិច្ឆេទ</th><th>វេន</th><th>អ្នកសវនកម្ម</th><th>ពិន្ទុ %</th><th>លំដាប់ថ្នាក់</th><th>ធ្លាក់ស្វ័យប្រវត្តិ</th></tr>`;
+      arr.forEach(h=>{
+        html += `<tr><td>${h.date}</td><td>${h.shift||'—'}</td><td>${h.auditor||'—'}</td><td>${(h.pct*100).toFixed(1)}%</td><td>${h.band}</td><td>${h.autoFail?'បាទ/ចាស':'ទេ'}</td></tr>`;
+      });
+      html += `</table>`;
+
+      arr.forEach(h=>{
+        html += `<h3>សវនកម្មថ្ងៃទី ${h.date} — ពិន្ទុ ${(h.pct*100).toFixed(1)}% (${h.band})</h3>`;
+        html += `<div class="meta">ពិន្ទុសរុប៖ <b>${(h.pct*100).toFixed(1)}%</b> &nbsp; លំដាប់ថ្នាក់៖ <b>${h.band}</b> &nbsp; ធ្លាក់ស្វ័យប្រវត្តិ៖ <span class="badge ${h.autoFail?'fail':'pass'}">${h.autoFail?'ធ្លាក់ស្វ័យប្រវត្តិ':'ជាប់'}</span></div>`;
+        html += `<table><tr><th>ធាតុផ្សំ</th><th>អតិបរមា</th><th>ពិន្ទុ</th><th>%</th></tr>`;
+        (h.pillarRows||[]).forEach(r=>{
+          html += `<tr><td>${r.title}</td><td>${r.max}</td><td>${r.score.toFixed(1)}</td><td>${(r.max?(r.score/r.max*100):0).toFixed(1)}%</td></tr>`;
+        });
+        html += `</table>`;
+        html += `<p><b>កំហុស និងការរកឃើញ (${h.faults.length})</b></p>`;
+        if(h.faults.length===0){
+          html += `<p>គ្មានកំហុសត្រូវបានកត់ត្រា — គ្រប់ធាតុវាយតម្លៃទាំងអស់ទទួលបានពិន្ទុពេញលេញ។</p>`;
+        } else {
+          html += wordFaultBlocks(h.faults, photoIndex[h.id] || null);
+        }
+      });
+    });
+    // evidence photos, pulled from the server for each inspection in range
+    // Anything saved before items carried an id still gets shown here.
+    let wordPhotoNo = 0;
+    for(const name of storeNames){
+      for(const h of storeGroups[name]){
+        const extra = loosePhotos[h.id] || [];
+        if(!extra.length) continue;
+        html += `<h2>រូបភាពភស្តុតាងផ្សេងទៀត — ${name} · ${h.date}</h2>`;
+        extra.forEach(p=>{
+          wordPhotoNo++;
+          const d = qcFitBox(p.data_url);
+          html += `<p style="page-break-inside:avoid;"><b>រូបទី ${wordPhotoNo}</b></p>`
+               +  `<table class="evbox"><tr><td>`
+               +  `<img class="ev" width="${d.w}" height="${d.h}" src="${p.data_url}"></td></tr></table>`;
+        });
+      }
+    }
+
+    html += `</body></html>`;
+  return { html, storeNames };
+}
+
 async function exportHistoryWordByStore(){
   const rows = filteredHistory();
   if(rows.length===0){ showToast('គ្មានទិន្នន័យសម្រាប់ការនាំចេញ (សូមរក្សាទុកសវនកម្មជាមុនសិន ឬពិនិត្យតម្រងវិញ)'); return; }
@@ -2313,87 +2438,9 @@ async function exportHistoryWordByStore(){
   }
   await qcMeasurePhotos(allShots);
 
-  const storeGroups = {};
-  rows.forEach(h=>{ (storeGroups[h.store] = storeGroups[h.store]||[]).push(h); });
-  const storeNames = Object.keys(storeGroups).sort();
-
-  const styles = wordBlockStyles() + `
-    body{font-family:'Khmer OS','Noto Sans Khmer',Calibri,Arial,sans-serif;color:#181B21;}
-    h1{color:#007DFF;font-size:22px;margin-bottom:2px;}
-    h2{color:#12151B;font-size:16px;border-bottom:2px solid #12151B;padding-bottom:4px;margin-top:24px;}
-    h3{color:#12151B;font-size:13px;margin-top:18px;}
-    table{border-collapse:collapse;width:100%;margin-top:8px;}
-    th,td{border:1px solid #DADDE2;padding:6px 8px;font-size:11px;text-align:left;}
-    th{background:#12151B;color:#fff;}
-    tr.critical td{color:#CF4331;font-weight:bold;}
-    tr.warning td{color:#C98A1B;}
-    .meta{font-size:12px;color:#444;margin-bottom:10px;}
-    .badge{display:inline-block;padding:3px 10px;border-radius:4px;font-weight:bold;color:#fff;}
-    .pass{background:#2E8B57;} .fail{background:#CF4331;}
-  `;
-  let html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-  <head><meta charset="utf-8"><title>របាយការណ៍ប្រវត្តិសវនកម្មតាមហាង</title><style>${styles}</style></head><body>`;
-  html += storeNames.length>1
-    ? wordLogoHtml() + `<h1>របាយការណ៍ប្រវត្តិសវនកម្មចម្រុះហាង — ON MART</h1>`
-    : wordLogoHtml() + `<h1>របាយការណ៍ប្រវត្តិសវនកម្មតាមហាង — ON MART</h1>`;
-  html += `<div class="meta">ចំនួនហាង៖ <b>${storeNames.length}</b> &nbsp; ចំនួនសវនកម្មសរុប៖ <b>${rows.length}</b>${state.historyFilter.month?` &nbsp; ខែ៖ <b>${state.historyFilter.month}</b>`:''}</div>`;
-
-  if(storeNames.length>1){
-    html += `<h2>សេចក្តីសង្ខេបចម្រុះហាង</h2><table><tr><th>ហាង</th><th>ចំនួនសវនកម្ម</th><th>ពិន្ទុមធ្យម %</th><th>ចំនួនធ្លាក់ស្វ័យប្រវត្តិ</th></tr>`;
-    storeNames.forEach(s=>{
-      const arr = storeGroups[s];
-      const avg = arr.reduce((sum,h)=>sum+h.pct,0)/arr.length*100;
-      const fails = arr.filter(h=>h.autoFail).length;
-      html += `<tr><td>${s}</td><td>${arr.length}</td><td>${avg.toFixed(1)}%</td><td>${fails}</td></tr>`;
-    });
-    html += `</table>`;
-  }
-
-  storeNames.forEach((s, idx)=>{
-    if(idx>0) html += `<br clear=all style='mso-special-character:line-break;page-break-before:always'>`;
-    const arr = storeGroups[s].slice().sort((a,b)=>a.date.localeCompare(b.date));
-    html += `<h2>ហាង៖ ${s}</h2>`;
-    html += `<table><tr><th>កាលបរិច្ឆេទ</th><th>វេន</th><th>អ្នកសវនកម្ម</th><th>ពិន្ទុ %</th><th>លំដាប់ថ្នាក់</th><th>ធ្លាក់ស្វ័យប្រវត្តិ</th></tr>`;
-    arr.forEach(h=>{
-      html += `<tr><td>${h.date}</td><td>${h.shift||'—'}</td><td>${h.auditor||'—'}</td><td>${(h.pct*100).toFixed(1)}%</td><td>${h.band}</td><td>${h.autoFail?'បាទ/ចាស':'ទេ'}</td></tr>`;
-    });
-    html += `</table>`;
-
-    arr.forEach(h=>{
-      html += `<h3>សវនកម្មថ្ងៃទី ${h.date} — ពិន្ទុ ${(h.pct*100).toFixed(1)}% (${h.band})</h3>`;
-      html += `<div class="meta">ពិន្ទុសរុប៖ <b>${(h.pct*100).toFixed(1)}%</b> &nbsp; លំដាប់ថ្នាក់៖ <b>${h.band}</b> &nbsp; ធ្លាក់ស្វ័យប្រវត្តិ៖ <span class="badge ${h.autoFail?'fail':'pass'}">${h.autoFail?'ធ្លាក់ស្វ័យប្រវត្តិ':'ជាប់'}</span></div>`;
-      html += `<table><tr><th>ធាតុផ្សំ</th><th>អតិបរមា</th><th>ពិន្ទុ</th><th>%</th></tr>`;
-      (h.pillarRows||[]).forEach(r=>{
-        html += `<tr><td>${r.title}</td><td>${r.max}</td><td>${r.score.toFixed(1)}</td><td>${(r.max?(r.score/r.max*100):0).toFixed(1)}%</td></tr>`;
-      });
-      html += `</table>`;
-      html += `<p><b>កំហុស និងការរកឃើញ (${h.faults.length})</b></p>`;
-      if(h.faults.length===0){
-        html += `<p>គ្មានកំហុសត្រូវបានកត់ត្រា — គ្រប់ធាតុវាយតម្លៃទាំងអស់ទទួលបានពិន្ទុពេញលេញ។</p>`;
-      } else {
-        html += wordFaultBlocks(h.faults, photoIndex[h.id] || null);
-      }
-    });
-  });
-  // evidence photos, pulled from the server for each inspection in range
-  // Anything saved before items carried an id still gets shown here.
-  let wordPhotoNo = 0;
-  for(const name of storeNames){
-    for(const h of storeGroups[name]){
-      const extra = loosePhotos[h.id] || [];
-      if(!extra.length) continue;
-      html += `<h2>រូបភាពភស្តុតាងផ្សេងទៀត — ${name} · ${h.date}</h2>`;
-      extra.forEach(p=>{
-        wordPhotoNo++;
-        const d = qcFitBox(p.data_url);
-        html += `<p style="page-break-inside:avoid;"><b>រូបទី ${wordPhotoNo}</b></p>`
-             +  `<table class="evbox"><tr><td>`
-             +  `<img class="ev" width="${d.w}" height="${d.h}" src="${p.data_url}"></td></tr></table>`;
-      });
-    }
-  }
-
-  html += `</body></html>`;
+  const built = buildHistoryWordHtml(rows, photoIndex, loosePhotos);
+  const html = built.html;
+  const storeNames = built.storeNames;
 
   const blob = new Blob(['\ufeff', html], {type:'application/msword'});
   const url = URL.createObjectURL(blob);
@@ -2403,6 +2450,60 @@ async function exportHistoryWordByStore(){
   showToast(storeNames.length>1 ? 'បាននាំចេញរបាយការណ៍ Word ចម្រុះហាង' : 'បាននាំចេញរបាយការណ៍ Word តាមហាង');
 }
 document.getElementById('btnExportHistoryWord').addEventListener('click', exportHistoryWordByStore);
+
+/* One Word file per store, collected in a single ZIP — for filing a report
+   per shop rather than one long document covering all of them. */
+async function exportHistoryWordPerStoreZip(){
+  const rows = filteredHistory();
+  if(rows.length===0){ showToast('គ្មានទិន្នន័យសម្រាប់ការនាំចេញ (សូមរក្សាទុកសវនកម្មជាមុនសិន ឬពិនិត្យតម្រងវិញ)'); return; }
+  if(typeof JSZip === 'undefined'){ showToast('មិនអាចបង្កើត ZIP បានទេ — សូមប្រើប៊ូតុង Word ធម្មតា'); return; }
+
+  showToast('កំពុងរៀបចំឯកសារ Word តាមហាង…');
+
+  const photoIndex = {}, loosePhotos = {};
+  for(const h of rows){
+    const ph = await fetchPhotosFor(h.id);
+    photoIndex[h.id] = {}; loosePhotos[h.id] = [];
+    (ph||[]).forEach(x=>{
+      if(x.item_id){ (photoIndex[h.id][x.item_id] = photoIndex[h.id][x.item_id]||[]).push(x); }
+      else loosePhotos[h.id].push(x);
+    });
+  }
+  const allShots = [];
+  for(const h of rows){
+    qcFaultPhotoUrls(h.faults, photoIndex[h.id] || null).forEach(u=>allShots.push(u));
+    (loosePhotos[h.id]||[]).forEach(p=>{ if(p.data_url) allShots.push(p.data_url); });
+  }
+  await qcMeasurePhotos(allShots);
+
+  const groups = {};
+  rows.forEach(h=>{ (groups[h.store] = groups[h.store]||[]).push(h); });
+  const names = Object.keys(groups).sort();
+
+  const zip = new JSZip();
+  const used = {};
+  names.forEach(store=>{
+    const built = buildHistoryWordHtml(groups[store], photoIndex, loosePhotos);
+    // A file name taken from a store label must not carry characters that
+    // break a path, and two stores must not collide on the same name.
+    let base = String(store).split(' — ')[0].replace(/[\\/:*?"<>|]+/g, '').trim() || 'store';
+    base = base.replace(/\s+/g, '_').slice(0, 60);
+    used[base] = (used[base] || 0) + 1;
+    const name = used[base] > 1 ? `${base}_${used[base]}` : base;
+    const tag = state.historyFilter.month ? `_${state.historyFilter.month}` : '';
+    zip.file(`QC_Report_${name}${tag}.doc`, '﻿' + built.html);
+  });
+
+  const blob = await zip.generateAsync({type:'blob'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `QC_Reports_By_Store_${historyFileTag()}.zip`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`បាននាំចេញឯកសារ Word ចំនួន ${names.length} (មួយហាងមួយឯកសារ)`);
+}
+document.getElementById('btnExportHistoryWordZip').addEventListener('click', exportHistoryWordPerStoreZip);
 
 async function exportHistoryPdfByStore(){
   if(!window.jspdf){ showToast('ឧបករណ៍ PDF កំពុងផ្ទុក — សូមព្យាយាមម្តងទៀតបន្តិច'); return; }
@@ -2618,6 +2719,7 @@ window.addEventListener('appinstalled', ()=>{
    INIT
    ============================================================ */
 loadHistory();
+loadHistoryFilter();
 let hadDraft = false;
 try{ hadDraft = !!localStorage.getItem(DRAFT_KEY); }catch(e){}
 loadDraft();
@@ -3135,11 +3237,11 @@ if(hadDraft && (state.store.store || state.store.date)) showToast('បានស�
 })();
 </script>
 
-<script src="/qc-settings-save.js?v=20261022e"></script>
-<script src="/qc-glossary.js?v=20261022e"></script>
-<script src="/qc-i18n-dict.js?v=20261022e"></script>
-<script src="/qc-i18n-dict2.js?v=20261022e"></script>
-<script src="/qc-i18n.js?v=20261022e"></script>
-<script src="/qc-print-report.js?v=20261022e"></script>
+<script src="/qc-settings-save.js?v=20261022f"></script>
+<script src="/qc-glossary.js?v=20261022f"></script>
+<script src="/qc-i18n-dict.js?v=20261022f"></script>
+<script src="/qc-i18n-dict2.js?v=20261022f"></script>
+<script src="/qc-i18n.js?v=20261022f"></script>
+<script src="/qc-print-report.js?v=20261022f"></script>
 </body>
 </html>
