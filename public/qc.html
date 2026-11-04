@@ -14,11 +14,11 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="/vendor/xlsx.full.min.js?v=20261022h"></script>
-<script src="/vendor/jszip.min.js?v=20261022h"></script>
-<script src="/vendor/jspdf.umd.min.js?v=20261022h"></script>
-<script src="/vendor/jspdf.plugin.autotable.min.js?v=20261022h"></script>
-<script src="/vendor/html2canvas.min.js?v=20261022h"></script>
+<script src="/vendor/xlsx.full.min.js?v=20261104a"></script>
+<script src="/vendor/jszip.min.js?v=20261104a"></script>
+<script src="/vendor/jspdf.umd.min.js?v=20261104a"></script>
+<script src="/vendor/jspdf.plugin.autotable.min.js?v=20261104a"></script>
+<script src="/vendor/html2canvas.min.js?v=20261104a"></script>
 <link rel="preload" href="/NotoSansKhmer-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:'ONMART Khmer';src:url('/NotoSansKhmer-Regular.woff2') format('woff2');
@@ -205,8 +205,34 @@ body{margin:0;background:var(--canvas);color:var(--text);font-family:var(--body)
   background:#fff;font-family:inherit;font-size:12px;color:#16233A;
 }
 .mcq-field>select:focus{outline:2px solid #2C62C4;outline-offset:1px;}
+
+/* multiple choice — the button that opens the list, and the list itself */
+.mcq-multi{position:relative;}
+.mcq-multi-btn{
+  width:100%;padding:6px 22px 6px 8px;border:1px solid #B9CCEC;border-radius:6px;
+  background:#fff url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2322447F' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 8px center;
+  font-family:inherit;font-size:12px;color:#16233A;text-align:left;cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.mcq-multi-btn.on{border-color:#2C62C4;font-weight:600;}
+.mcq-multi-btn:focus{outline:2px solid #2C62C4;outline-offset:1px;}
+.mcq-pop{
+  position:absolute;z-index:40;top:calc(100% + 3px);left:0;right:0;min-width:210px;
+  background:#fff;border:1px solid #B9CCEC;border-radius:8px;
+  box-shadow:0 10px 26px rgba(16,32,64,.18);padding:5px;max-height:240px;overflow-y:auto;
+}
+.mcq-pop[hidden]{display:none;}
+.mcq-opt{
+  display:flex;align-items:flex-start;gap:7px;padding:5px 7px;border-radius:5px;
+  font-size:12px;line-height:1.6;color:#16233A;cursor:pointer;
+}
+.mcq-opt:hover{background:#EEF4FF;}
+.mcq-opt input{margin:2px 0 0;flex:none;width:15px;height:15px;}
+.mcq-opt>span{flex:1;min-width:0;}
+.mcq-all{border-bottom:1px solid #E3EAF6;margin-bottom:3px;font-weight:700;color:#22447F;}
+.mcq-empty{padding:7px;font-size:12px;color:#7A869A;}
 @media(max-width:700px){.mcq-box{grid-template-columns:1fr;gap:7px;}}
-@media print{.mcq-box{background:#fff;}}
+@media print{.mcq-box{background:#fff;} .mcq-pop{display:none!important;}}
 .item-row:last-child{border-bottom:none;}
 .item-row:nth-child(even){background:#F7F7F8;}
 .item-no{font-family:var(--mono);font-weight:600;color:var(--muted);font-size:12.5px;padding-top:3px;}
@@ -842,18 +868,64 @@ function mcqNeeded(id,isStd){
   return isStd ? (r==='I' || r==='F') : (Number(r) < 5);
 }
 
+/* ------------------------------------------------------------------
+   Multiple choice: more than one answer per field.
+
+   One fault often has several causes, and a single dropdown forced the
+   inspector to pick the closest one and lose the rest. These fields now
+   take any number of options, with a "select all" at the top.
+
+   The chosen options are stored as one string joined with "; ", exactly
+   as a single choice always was. That matters: every report, export and
+   admin screen reads these as text, and audits saved before this change
+   hold a single value which still reads back correctly.
+   ------------------------------------------------------------------ */
+const MCQ_SEP = '; ';
+
+function mcqSplit(v){
+  return String(v === undefined || v === null ? '' : v)
+    .split(/\s*;\s*/).map(s=>s.trim()).filter(Boolean);
+}
+function mcqJoin(list){ return list.join(MCQ_SEP); }
+
+function mcqSummary(chosen){
+  if(!chosen.length) return '— ជ្រើសរើស —';
+  if(chosen.length === 1) return chosen[0];
+  return `បានជ្រើស ${chosen.length}`;
+}
+
 function renderMcqBlock(id,isStd){
   if(!mcqNeeded(id,isStd)) return '';
   const cur = mcqOf(id);
   const sels = MCQ_FIELDS.map(f=>{
     const list = mcqList(id,f.key);
-    const opts = ['<option value="">— ជ្រើសរើស —</option>']
-      .concat(list.map(o=>`<option value="${escapeHtml(o)}" ${cur[f.key]===o?'selected':''}>${escapeHtml(o)}</option>`))
-      .join('');
-    return `<label class="mcq-field"><span>${f.label}</span>
-      <select data-role="mcq" data-f="${f.key}">${opts}</select></label>`;
+    const chosen = mcqSplit(cur[f.key]);
+    const picked = new Set(chosen);
+    const allOn = list.length > 0 && list.every(o=>picked.has(o));
+    const some = chosen.length > 0 && !allOn;
+
+    const opts = list.map(o=>
+      `<label class="mcq-opt"><input type="checkbox" data-role="mcq-opt" value="${escapeHtml(o)}"${picked.has(o)?' checked':''}><span>${escapeHtml(o)}</span></label>`
+    ).join('');
+
+    return `<div class="mcq-field" data-f="${f.key}"><span>${f.label}</span>
+      <div class="mcq-multi">
+        <button type="button" class="mcq-multi-btn${chosen.length?' on':''}" data-role="mcq-open"
+                title="${escapeHtml(chosen.join(MCQ_SEP))}">${escapeHtml(mcqSummary(chosen))}</button>
+        <div class="mcq-pop" hidden>
+          <label class="mcq-opt mcq-all"><input type="checkbox" data-role="mcq-all"${allOn?' checked':''}${some?' data-some="1"':''}><span>ជ្រើសរើសទាំងអស់</span></label>
+          <div class="mcq-opts">${opts || '<div class="mcq-empty">គ្មានជម្រើស</div>'}</div>
+        </div>
+      </div></div>`;
   }).join('');
   return `<div class="mcq-box">${sels}</div>`;
+}
+
+/* The "select all" box shows a dash when only some options are ticked;
+   that state cannot be set from HTML, so it is applied after render. */
+function syncMcqAllBoxes(root){
+  const boxes = (root || document).querySelectorAll('[data-role="mcq-all"][data-some="1"]');
+  for(let i = 0; i < boxes.length; i++) boxes[i].indeterminate = true;
 }
 
 /* ============================================================
@@ -1555,6 +1627,58 @@ document.getElementById('pillarsMount').addEventListener('change', e=>{
     state.mcq[id][f] = e.target.value;
     scheduleDraftSave();
   }
+  if(e.target.dataset.role==='mcq-opt' || e.target.dataset.role==='mcq-all'){
+    const field = e.target.closest('.mcq-field');
+    if(!field) return;
+    const key = field.dataset.f;
+    const boxes = Array.prototype.slice.call(field.querySelectorAll('[data-role="mcq-opt"]'));
+
+    if(e.target.dataset.role==='mcq-all'){
+      boxes.forEach(b=>{ b.checked = e.target.checked; });
+    }
+
+    const chosen = boxes.filter(b=>b.checked).map(b=>b.value);
+    state.mcq[id] = state.mcq[id] || {};
+    state.mcq[id][key] = mcqJoin(chosen);
+
+    const all = field.querySelector('[data-role="mcq-all"]');
+    if(all){
+      all.checked = boxes.length > 0 && chosen.length === boxes.length;
+      all.indeterminate = chosen.length > 0 && chosen.length < boxes.length;
+    }
+    // Repaint just this control. A full re-render here would close the
+    // list after every tick, which makes picking several impossible.
+    const btn = field.querySelector('.mcq-multi-btn');
+    if(btn){
+      btn.textContent = mcqSummary(chosen);
+      btn.title = chosen.join(MCQ_SEP);
+      btn.classList.toggle('on', chosen.length > 0);
+    }
+    scheduleDraftSave();
+  }
+});
+
+/* Open and close the option list. */
+document.getElementById('pillarsMount').addEventListener('click', e=>{
+  const opener = e.target.closest('[data-role="mcq-open"]');
+  if(opener){
+    const pop = opener.parentNode.querySelector('.mcq-pop');
+    const willOpen = pop && pop.hidden;
+    // only one list open at a time
+    document.querySelectorAll('.mcq-pop').forEach(p=>{ p.hidden = true; });
+    if(willOpen){ pop.hidden = false; syncMcqAllBoxes(pop); }
+    e.stopPropagation();
+    return;
+  }
+  // clicking inside an open list must not close it
+  if(e.target.closest('.mcq-pop')) e.stopPropagation();
+});
+
+document.addEventListener('click', ()=>{
+  document.querySelectorAll('.mcq-pop').forEach(p=>{ p.hidden = true; });
+});
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape') document.querySelectorAll('.mcq-pop').forEach(p=>{ p.hidden = true; });
 });
 document.getElementById('pillarsMount').addEventListener('input', e=>{
   const row = e.target.closest('.item-row');
@@ -3253,11 +3377,11 @@ if(hadDraft && (state.store.store || state.store.date)) showToast('បានស�
 })();
 </script>
 
-<script src="/qc-settings-save.js?v=20261022h"></script>
-<script src="/qc-glossary.js?v=20261022h"></script>
-<script src="/qc-i18n-dict.js?v=20261022h"></script>
-<script src="/qc-i18n-dict2.js?v=20261022h"></script>
-<script src="/qc-i18n.js?v=20261022h"></script>
-<script src="/qc-print-report.js?v=20261022h"></script>
+<script src="/qc-settings-save.js?v=20261104a"></script>
+<script src="/qc-glossary.js?v=20261104a"></script>
+<script src="/qc-i18n-dict.js?v=20261104a"></script>
+<script src="/qc-i18n-dict2.js?v=20261104a"></script>
+<script src="/qc-i18n.js?v=20261104a"></script>
+<script src="/qc-print-report.js?v=20261104a"></script>
 </body>
 </html>

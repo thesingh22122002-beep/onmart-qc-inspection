@@ -221,6 +221,8 @@ window.QC_I18N = Object.assign(window.QC_I18N || {}, {
   'ត្រងតាមហាង (អាចជ្រើសរើសបានច្រើន — ទុកទទេ = ហាងទាំងអស់)': 'Filter by store (multiple allowed — leave empty = all stores)',
   'មិនទាន់មានសវនកម្មដែលបានរក្សាទុកទេ': 'No saved audits yet',
   'ជ្រើសរើសទាំងអស់': 'Select all',
+  '— ជ្រើសរើស —': '— Select —',
+  'គ្មានជម្រើស': 'No options',
   'មិនជ្រើសរើសអ្វីទាំងអស់': 'Clear selection',
   'ត្រងតាមខែ': 'Filter by month',
   'គ្រប់ខែទាំងអស់': 'All months',
