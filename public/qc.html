@@ -14,11 +14,11 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="/vendor/xlsx.full.min.js?v=20261104b"></script>
-<script src="/vendor/jszip.min.js?v=20261104b"></script>
-<script src="/vendor/jspdf.umd.min.js?v=20261104b"></script>
-<script src="/vendor/jspdf.plugin.autotable.min.js?v=20261104b"></script>
-<script src="/vendor/html2canvas.min.js?v=20261104b"></script>
+<script src="/vendor/xlsx.full.min.js?v=20261104c"></script>
+<script src="/vendor/jszip.min.js?v=20261104c"></script>
+<script src="/vendor/jspdf.umd.min.js?v=20261104c"></script>
+<script src="/vendor/jspdf.plugin.autotable.min.js?v=20261104c"></script>
+<script src="/vendor/html2canvas.min.js?v=20261104c"></script>
 <link rel="preload" href="/NotoSansKhmer-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:'ONMART Khmer';src:url('/NotoSansKhmer-Regular.woff2') format('woff2');
@@ -262,6 +262,29 @@ body{margin:0;background:var(--canvas);color:var(--text);font-family:var(--body)
 .t-none{font-size:9.5px;color:var(--muted);margin-left:4px;text-transform:none;letter-spacing:0;}
 .t-reset{margin-top:4px;font-size:10.5px;padding:3px 7px;border:1px solid var(--line);
   background:#fff;border-radius:5px;cursor:pointer;font-family:inherit;color:#444;}
+.trend-bar.none{background:#D8DCE2;}
+.trend-scope{display:grid;grid-template-columns:minmax(220px,340px) auto;gap:12px;margin-bottom:14px;align-items:end;}
+@media(max-width:700px){.trend-scope{grid-template-columns:1fr;}}
+
+/* section / store / item analysis */
+.an-list{display:flex;flex-direction:column;gap:9px;margin-top:6px;}
+.an-row{display:grid;grid-template-columns:168px 1fr 62px;grid-template-areas:"n b p" ". s s";
+  gap:4px 10px;align-items:center;}
+.an-name{grid-area:n;font-size:12.5px;font-weight:600;color:#12151B;}
+.an-bar{grid-area:b;height:12px;background:#EDEFF2;border-radius:7px;overflow:hidden;}
+.an-bar>span{display:block;height:100%;border-radius:7px;}
+.an-bar>span.good{background:#2E8B57;} .an-bar>span.ok{background:#7FB800;}
+.an-bar>span.warn{background:#E0A800;} .an-bar>span.bad{background:var(--fail);}
+.an-pct{grid-area:p;text-align:right;font-family:var(--mono);font-size:12.5px;font-weight:700;}
+.an-pct.good{color:#2E8B57;} .an-pct.ok{color:#5E8C00;}
+.an-pct.warn{color:#9A7300;} .an-pct.bad{color:var(--fail);}
+.an-sub{grid-area:s;font-size:10.5px;color:var(--muted);}
+@media(max-width:700px){.an-row{grid-template-columns:1fr 56px;grid-template-areas:"n p" "b b" "s s";}}
+td.num.good,td.num.ok{color:#2E8B57;font-weight:600;}
+td.num.warn{color:#9A7300;font-weight:600;}
+td.num.bad{color:var(--fail);font-weight:700;}
+.d-up{color:#2E8B57;font-weight:700;} .d-down{color:var(--fail);font-weight:700;}
+.d-flat{color:var(--muted);} .d-none{color:var(--muted);}
 
 .item-row:last-child{border-bottom:none;}
 .item-row:nth-child(even){background:#F7F7F8;}
@@ -550,9 +573,33 @@ body{margin:0;background:var(--canvas);color:var(--text);font-family:var(--body)
     <div class="panel">
       <h2>និន្នាការពិន្ទុប្រចាំខែ</h2>
       <p class="sub">កត់ត្រាពិន្ទុសរុប (%) របស់ខែនីមួយៗ ដើម្បីតាមដានលទ្ធផលហាងតាមពេលវេលា។</p>
-      <button class="btn btn-outline btn-sm" id="btnAutoFillTrend" style="margin-bottom:12px;">🔄 បំពេញស្វ័យប្រវត្តិពីប្រវត្តិសវនកម្ម (ពិន្ទុមធ្យមប្រចាំខែ)</button>
+      <div class="trend-scope">
+        <div class="field"><label>វិភាគសម្រាប់</label>
+          <select id="trendStore"><option value="">គ្រប់ហាងទាំងអស់</option></select></div>
+        <div class="field" style="display:flex;align-items:flex-end;">
+          <button class="btn btn-outline btn-sm" id="btnAutoFillTrend">🔄 ប្រើតម្លៃស្វ័យប្រវត្តិទាំងអស់</button>
+        </div>
+      </div>
       <div class="trend-chart" id="trendChart"></div>
       <div class="trend-inputs" id="trendInputs"></div>
+    </div>
+
+    <div class="panel">
+      <h2>វិភាគតាមផ្នែក</h2>
+      <p class="sub">ផ្នែកណាខ្សោយជាងគេ — គណនាពីសវនកម្មដែលបានរក្សាទុក តាមវិសាលភាពដែលបានជ្រើសខាងលើ។</p>
+      <div id="sectionAnalysis"></div>
+    </div>
+
+    <div class="panel" id="storeComparePanel">
+      <h2>ប្រៀបធៀបតាមហាង</h2>
+      <p class="sub">ពិន្ទុមធ្យម និងទិសដៅផ្លាស់ប្ដូរធៀបនឹងខែមុន។</p>
+      <div id="storeCompare"></div>
+    </div>
+
+    <div class="panel">
+      <h2>ធាតុដែលធ្លាក់ញឹកញាប់បំផុត</h2>
+      <p class="sub">ធាតុត្រួតពិនិត្យដែលបាត់ពិន្ទុច្រើនជាងគេ — កន្លែងដែលការកែលម្អនឹងផ្ដល់លទ្ធផលខ្ពស់បំផុត។</p>
+      <div id="weakItems"></div>
     </div>
   </div>
 
@@ -855,6 +902,7 @@ const state = {
   kpi:{},       // index -> {actual,status}
   trend:{},     // month -> number (manual override only; the figure shown is computed)
   trendOverride:{}, // month -> {value, reason, by, at} — a deliberate manual figure
+  trendStore:'',    // '' = every store; otherwise the store the analysis covers
   stores: STORES.map(s=>({...s})),
   auditors: [...AUDITORS],
   history: [],  // saved inspection snapshots, persisted to localStorage
@@ -1519,10 +1567,16 @@ function isOfficialAudit(h){
   return true;
 }
 
+/* The audits the Trends page is analysing: official ones, narrowed to
+   the chosen store when one is chosen. */
+function trendScopeRows(){
+  const store = state.trendStore || '';
+  return (state.history || []).filter(h => isOfficialAudit(h) && (!store || h.store === store));
+}
+
 function computedTrend(){
   const sums = {}, counts = {};
-  (state.history || []).forEach(h=>{
-    if(!isOfficialAudit(h)) return;
+  trendScopeRows().forEach(h=>{
     const mm = String(h.month || '').split('-')[1];
     const km = MONTH_INDEX_KM[mm];
     if(!km) return;
@@ -1546,6 +1600,156 @@ function trendValue(m, auto){
   return { value: 0, manual: false, audits: 0 };
 }
 
+/* ==================================================================
+   Analysis — by section, by store, and by checklist item
+
+   The monthly figure says a store scored 82%. It does not say which
+   part of the audit lost the points, nor whether the same item keeps
+   losing them. These three panels answer that, from the audits that
+   are already saved.
+   ================================================================== */
+
+function pctTone(v){ return v >= 90 ? 'good' : v >= 80 ? 'ok' : v >= 70 ? 'warn' : 'bad'; }
+
+/** Average % per pillar, over the audits in scope. */
+function sectionAnalysis(){
+  const rows = trendScopeRows();
+  const score = {}, max = {}, n = {};
+  rows.forEach(h=>{
+    (h.pillarRows || []).forEach(r=>{
+      if(!r || !r.title) return;
+      const key = String(r.title).split('—')[0].trim();
+      score[key] = (score[key] || 0) + (Number(r.score) || 0);
+      max[key]   = (max[key]   || 0) + (Number(r.max)   || 0);
+      n[key]     = (n[key]     || 0) + 1;
+    });
+  });
+  return Object.keys(score)
+    .map(k=>({ title: k, score: score[k], max: max[k], audits: n[k],
+               pct: max[k] ? (score[k] / max[k] * 100) : 0 }))
+    .sort((a,b)=> a.pct - b.pct);          // weakest first
+}
+
+function renderSectionAnalysis(){
+  const el = document.getElementById('sectionAnalysis');
+  if(!el) return;
+  const list = sectionAnalysis();
+  if(!list.length){ el.innerHTML = '<p class="foot-note">មិនទាន់មានទិន្នន័យសម្រាប់វិសាលភាពនេះទេ។</p>'; return; }
+  el.innerHTML = `<div class="an-list">` + list.map(s=>`
+    <div class="an-row">
+      <div class="an-name">${escapeHtml(s.title)}</div>
+      <div class="an-bar"><span class="${pctTone(s.pct)}" style="width:${Math.max(1, Math.min(100, s.pct))}%"></span></div>
+      <div class="an-pct ${pctTone(s.pct)}">${s.pct.toFixed(1)}%</div>
+      <div class="an-sub">${s.score.toFixed(0)} / ${s.max} · សវនកម្ម ${s.audits}</div>
+    </div>`).join('') + `</div>`;
+}
+
+/** Each store: average, audits, auto-fails, and the move since last month. */
+function storeComparison(){
+  const rows = (state.history || []).filter(isOfficialAudit);
+  const months = Array.from(new Set(rows.map(h=>h.month).filter(Boolean))).sort();
+  const latest = months[months.length - 1];
+  const prev = months[months.length - 2];
+
+  const byStore = {};
+  rows.forEach(h=>{
+    const s = (byStore[h.store] = byStore[h.store] || { store: h.store, sum: 0, n: 0, fails: 0, cur: [], old: [] });
+    s.sum += (Number(h.pct) || 0) * 100;
+    s.n++;
+    if(h.autoFail) s.fails++;
+    if(h.month === latest) s.cur.push((Number(h.pct) || 0) * 100);
+    if(h.month === prev)   s.old.push((Number(h.pct) || 0) * 100);
+  });
+
+  const avg = a => a.length ? a.reduce((x,y)=>x+y,0) / a.length : null;
+  return Object.keys(byStore).map(k=>{
+    const s = byStore[k];
+    const cur = avg(s.cur), old = avg(s.old);
+    return { store: s.store, avg: s.n ? s.sum / s.n : 0, audits: s.n, fails: s.fails,
+             cur, delta: (cur !== null && old !== null) ? cur - old : null };
+  }).sort((a,b)=> a.avg - b.avg);
+}
+
+function renderStoreCompare(){
+  const el = document.getElementById('storeCompare');
+  const panel = document.getElementById('storeComparePanel');
+  if(!el) return;
+  // comparing stores only makes sense when looking at more than one
+  if(panel) panel.style.display = state.trendStore ? 'none' : '';
+  if(state.trendStore) return;
+
+  const list = storeComparison();
+  if(!list.length){ el.innerHTML = '<p class="foot-note">មិនទាន់មានទិន្នន័យទេ។</p>'; return; }
+  el.innerHTML = `<table class="sc-table"><thead><tr>
+      <th>ហាង</th><th class="num">ពិន្ទុមធ្យម</th><th class="num">សវនកម្ម</th>
+      <th class="num">ធ្លាក់ស្វ័យប្រវត្តិ</th><th class="num">ប្ដូរពីខែមុន</th></tr></thead><tbody>`
+    + list.map(s=>{
+        const d = s.delta;
+        const arrow = d === null ? '<span class="d-none">—</span>'
+          : d > 0.05 ? `<span class="d-up">▲ ${d.toFixed(1)}</span>`
+          : d < -0.05 ? `<span class="d-down">▼ ${Math.abs(d).toFixed(1)}</span>`
+          : '<span class="d-flat">■ 0.0</span>';
+        return `<tr><td>${escapeHtml(s.store)}</td>
+          <td class="num ${pctTone(s.avg)}">${s.avg.toFixed(1)}%</td>
+          <td class="num">${s.audits}</td>
+          <td class="num">${s.fails ? '<b style="color:var(--fail)">'+s.fails+'</b>' : '0'}</td>
+          <td class="num">${arrow}</td></tr>`;
+      }).join('')
+    + `</tbody></table>`;
+}
+
+/** Checklist items that lose the most points, over the audits in scope. */
+function weakestItems(limit){
+  const rows = trendScopeRows();
+  const agg = {};
+  rows.forEach(h=>{
+    (h.faults || []).forEach(f=>{
+      if(!f) return;
+      const key = f.itemId || (f.pillar + '-' + f.no);
+      const a = (agg[key] = agg[key] || { key, pillar: f.pillar || '', no: f.no,
+                                          desc: f.desc || '', times: 0, lost: 0, stores: new Set() });
+      a.times++;
+      a.lost += Math.max(0, (Number(f.max) || 0) - (Number(f.score) || 0));
+      a.stores.add(h.store);
+    });
+  });
+  return Object.keys(agg).map(k=>({ ...agg[k], stores: agg[k].stores.size }))
+    .sort((a,b)=> b.lost - a.lost || b.times - a.times)
+    .slice(0, limit || 10);
+}
+
+function renderWeakItems(){
+  const el = document.getElementById('weakItems');
+  if(!el) return;
+  const list = weakestItems(10);
+  if(!list.length){ el.innerHTML = '<p class="foot-note">គ្មានកំហុសត្រូវបានកត់ត្រាសម្រាប់វិសាលភាពនេះទេ។</p>'; return; }
+  el.innerHTML = `<table class="sc-table"><thead><tr>
+      <th>ផ្នែក</th><th>ធាតុ</th><th class="num">ធ្លាក់ (ដង)</th>
+      <th class="num">ពិន្ទុបាត់</th><th class="num">ហាង</th></tr></thead><tbody>`
+    + list.map(w=>`<tr>
+        <td>${escapeHtml(w.pillar)}</td>
+        <td>${escapeHtml(w.no ? w.no + '. ' : '')}${escapeHtml(String(w.desc).slice(0, 90))}</td>
+        <td class="num">${w.times}</td>
+        <td class="num"><b>${w.lost.toFixed(1)}</b></td>
+        <td class="num">${w.stores}</td></tr>`).join('')
+    + `</tbody></table>`;
+}
+
+function renderTrendStorePicker(){
+  const sel = document.getElementById('trendStore');
+  if(!sel) return;
+  const stores = Array.from(new Set((state.history || []).filter(isOfficialAudit).map(h=>h.store))).sort();
+  sel.innerHTML = '<option value="">គ្រប់ហាងទាំងអស់</option>'
+    + stores.map(s=>`<option value="${escapeHtml(s)}"${state.trendStore===s?' selected':''}>${escapeHtml(s)}</option>`).join('');
+}
+
+function renderTrendAnalysis(){
+  renderTrendStorePicker();
+  renderSectionAnalysis();
+  renderStoreCompare();
+  renderWeakItems();
+}
+
 function renderTrend(){
   const maxV = 100;
   const auto = computedTrend();
@@ -1555,7 +1759,11 @@ function renderTrend(){
     const title = v.manual
       ? `${v.value}% · បញ្ចូលដោយដៃ`
       : `${v.value}% · ពីសវនកម្ម ${v.audits || 0}`;
-    return `<div class="trend-col"><div class="trend-bar${v.manual?' manual':''}" style="height:${Math.max(2, v.value / maxV * 160)}px;" title="${escapeHtml(title)}"></div><div class="trend-month">${m}</div></div>`;
+    // a month with no audits is not a month that scored zero
+    const none = !auto[m] && !v.manual;
+    const cls = none ? ' none' : (v.manual ? ' manual' : '');
+    const h = none ? 3 : Math.max(2, v.value / maxV * 160);
+    return `<div class="trend-col"><div class="trend-bar${cls}" style="height:${h}px;" title="${escapeHtml(none ? m + ' · គ្មានទិន្នន័យ' : title)}"></div><div class="trend-month">${m}</div></div>`;
   }).join('');
 
   document.getElementById('trendInputs').innerHTML = MONTHS.map(m=>{
@@ -1572,6 +1780,8 @@ function renderTrend(){
       ${v.manual ? `<button type="button" class="t-reset" data-role="trend-reset" data-m="${m}">ប្រើតម្លៃស្វ័យប្រវត្តិ</button>` : ''}
     </div>`;
   }).join('');
+
+  renderTrendAnalysis();
 }
 function renderSettings(){
   document.getElementById('storeEditor').innerHTML = state.stores.map((s,i)=>`
@@ -2040,6 +2250,11 @@ document.getElementById('trendInputs').addEventListener('click', e=>{
   renderTrend();
   scheduleDraftSave();
   showToast(`ខែ ${m} ត្រឡប់ទៅតម្លៃស្វ័យប្រវត្តិវិញ`);
+});
+
+document.getElementById('trendStore').addEventListener('change', e=>{
+  state.trendStore = e.target.value || '';
+  renderTrend();
 });
 
 document.getElementById('btnAutoFillTrend').addEventListener('click', ()=>{
@@ -3616,11 +3831,11 @@ if(hadDraft && (state.store.store || state.store.date)) showToast('បានស�
 })();
 </script>
 
-<script src="/qc-settings-save.js?v=20261104b"></script>
-<script src="/qc-glossary.js?v=20261104b"></script>
-<script src="/qc-i18n-dict.js?v=20261104b"></script>
-<script src="/qc-i18n-dict2.js?v=20261104b"></script>
-<script src="/qc-i18n.js?v=20261104b"></script>
-<script src="/qc-print-report.js?v=20261104b"></script>
+<script src="/qc-settings-save.js?v=20261104c"></script>
+<script src="/qc-glossary.js?v=20261104c"></script>
+<script src="/qc-i18n-dict.js?v=20261104c"></script>
+<script src="/qc-i18n-dict2.js?v=20261104c"></script>
+<script src="/qc-i18n.js?v=20261104c"></script>
+<script src="/qc-print-report.js?v=20261104c"></script>
 </body>
 </html>
