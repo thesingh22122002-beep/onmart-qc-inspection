@@ -14,11 +14,11 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+Khmer:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="/vendor/xlsx.full.min.js?v=20261104a"></script>
-<script src="/vendor/jszip.min.js?v=20261104a"></script>
-<script src="/vendor/jspdf.umd.min.js?v=20261104a"></script>
-<script src="/vendor/jspdf.plugin.autotable.min.js?v=20261104a"></script>
-<script src="/vendor/html2canvas.min.js?v=20261104a"></script>
+<script src="/vendor/xlsx.full.min.js?v=20261104b"></script>
+<script src="/vendor/jszip.min.js?v=20261104b"></script>
+<script src="/vendor/jspdf.umd.min.js?v=20261104b"></script>
+<script src="/vendor/jspdf.plugin.autotable.min.js?v=20261104b"></script>
+<script src="/vendor/html2canvas.min.js?v=20261104b"></script>
 <link rel="preload" href="/NotoSansKhmer-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face{font-family:'ONMART Khmer';src:url('/NotoSansKhmer-Regular.woff2') format('woff2');
@@ -233,6 +233,36 @@ body{margin:0;background:var(--canvas);color:var(--text);font-family:var(--body)
 .mcq-empty{padding:7px;font-size:12px;color:#7A869A;}
 @media(max-width:700px){.mcq-box{grid-template-columns:1fr;gap:7px;}}
 @media print{.mcq-box{background:#fff;} .mcq-pop{display:none!important;}}
+/* repeat finding panel (Phase 1) */
+.rf-box{margin-top:6px;border:1px solid #F3C98B;background:#FFF8EC;border-radius:7px;padding:5px 8px;}
+.rf-box>summary{cursor:pointer;font-size:11.5px;color:#8A5A12;line-height:1.7;list-style:none;}
+.rf-box>summary::-webkit-details-marker{display:none;}
+.rf-warn{font-weight:700;margin-right:5px;}
+.rf-list{margin-top:6px;border-top:1px dashed #E7C58F;padding-top:5px;}
+.rf-row{display:grid;grid-template-columns:76px 56px 1fr 68px 1.4fr;gap:6px;font-size:11px;
+  color:#4A3A1C;padding:3px 0;border-bottom:1px solid #F3E7D0;}
+.rf-row:last-child{border-bottom:none;}
+.rf-score{text-align:right;font-family:var(--mono);}
+.rf-note{color:#7A6A4C;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rf-note-foot{margin:6px 0 2px;font-size:10.5px;color:#8A7A5C;line-height:1.7;}
+@media(max-width:700px){.rf-row{grid-template-columns:1fr 1fr;}.rf-note{grid-column:1/-1;white-space:normal;}}
+
+/* calculated KPI summary (Phase 2) */
+.kpi-auto{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px;margin:10px 0 14px;}
+.kpi-auto-cell{background:#F4F6FA;border:1px solid var(--line);border-radius:9px;padding:10px 12px;}
+.kpi-auto-cell .v{font-size:20px;font-weight:700;color:#12151B;line-height:1.3;}
+.kpi-auto-cell .l{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.6;}
+.kpi-auto-cell.good .v{color:#1F7A4D;} .kpi-auto-cell.bad .v{color:var(--fail);}
+.kpi-auto-cell.warn .v{color:#B4700E;}
+
+/* trend: calculated vs manually entered */
+.trend-bar.manual{background:repeating-linear-gradient(45deg,#B4700E,#B4700E 5px,#D79B3C 5px,#D79B3C 10px);}
+.t-auto{font-size:9.5px;font-weight:600;color:#1F7A4D;margin-left:4px;text-transform:none;letter-spacing:0;}
+.t-manual{font-size:9.5px;font-weight:600;color:#B4700E;margin-left:4px;text-transform:none;letter-spacing:0;}
+.t-none{font-size:9.5px;color:var(--muted);margin-left:4px;text-transform:none;letter-spacing:0;}
+.t-reset{margin-top:4px;font-size:10.5px;padding:3px 7px;border:1px solid var(--line);
+  background:#fff;border-radius:5px;cursor:pointer;font-family:inherit;color:#444;}
+
 .item-row:last-child{border-bottom:none;}
 .item-row:nth-child(even){background:#F7F7F8;}
 .item-no{font-family:var(--mono);font-weight:600;color:var(--muted);font-size:12.5px;padding-top:3px;}
@@ -509,7 +539,8 @@ body{margin:0;background:var(--canvas);color:var(--text);font-family:var(--body)
   <div class="view" id="view-kpi">
     <div class="panel">
       <h2>សូចនាករសមិទ្ធិផលសំខាន់ៗ QA/QC</h2>
-      <p class="sub">បញ្ចូលតម្លៃជាក់ស្តែង និងកំណត់ស្ថានភាពសម្រាប់ KPI នីមួយៗ។</p>
+      <p class="sub">តួលេខខាងក្រោមគណនាស្វ័យប្រវត្តិពីសវនកម្មដែលបានរក្សាទុក (មិនរាប់ហាងសាកល្បង)។ តារាង KPI ខាងក្រោមនៅបញ្ចូលដោយដៃ។</p>
+      <div class="kpi-auto" id="kpiAuto"></div>
       <div class="kpi-grid" id="kpiGrid"></div>
     </div>
   </div>
@@ -822,7 +853,8 @@ const state = {
   photos:{},    // id -> [{name,dataUrl}]
   zt:{},        // index -> 'Yes'/'No'/''
   kpi:{},       // index -> {actual,status}
-  trend:{},     // month -> number
+  trend:{},     // month -> number (manual override only; the figure shown is computed)
+  trendOverride:{}, // month -> {value, reason, by, at} — a deliberate manual figure
   stores: STORES.map(s=>({...s})),
   auditors: [...AUDITORS],
   history: [],  // saved inspection snapshots, persisted to localStorage
@@ -960,13 +992,15 @@ function loadDraft(){
     if(d.zt) state.zt = d.zt;
     if(d.kpi) state.kpi = d.kpi;
     if(d.trend) state.trend = d.trend;
+    if(d.trendOverride) state.trendOverride = d.trendOverride;
   }catch(e){ /* ignore corrupt draft */ }
 }
 function persistDraftNow(){
   try{
     localStorage.setItem(DRAFT_KEY, JSON.stringify({
       store: state.store, ratings: state.ratings, notes: state.notes, mcq: state.mcq,
-      zt: state.zt, kpi: state.kpi, trend: state.trend, savedAt: new Date().toISOString()
+      zt: state.zt, kpi: state.kpi, trend: state.trend,
+      trendOverride: state.trendOverride, savedAt: new Date().toISOString()
     }));
   }catch(e){ /* storage full — silently skip, history save still works */ }
 }
@@ -1114,6 +1148,9 @@ function renderStoreFields(){
 function applyStoreField(id){
   const key = id.replace('f_','');
   state.store[key] = document.getElementById(id).value;
+  // The repeat-finding panels belong to a store and a date, so they have
+  // to be rebuilt when either changes.
+  if(key === 'store' || key === 'date') renderPillars();
   scheduleDraftSave();
 }
 
@@ -1137,6 +1174,64 @@ function pillarSubtotal(pillar,isStd){
 function escapeHtml(str){
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+/* ==================================================================
+   PHASE 1 — Repeat finding detection
+
+   When the same checklist item has already failed at this store, the
+   inspector should see it before rating, not after the report is read.
+
+   Two rules from the specification are followed deliberately:
+     · match on store + item, against audits already saved (a draft in
+       progress is not history, and the visit being entered now is not
+       compared against itself);
+     · a later audit that found nothing does NOT mark the finding
+       resolved. Only a CAPA verification can do that, and that does
+       not exist yet, so this panel never claims a finding is closed.
+   ================================================================== */
+function repeatFindings(id){
+  const store = state.store.store;
+  if(!store || !id) return null;
+  const today = state.store.date || '';
+
+  const hits = [];
+  (state.history || []).forEach(h=>{
+    if(h.store !== store) return;
+    // the visit being entered now is not a previous visit
+    if(today && h.date === today) return;
+    const f = (h.faults || []).find(x => x && x.itemId === id);
+    if(f) hits.push({ date: h.date || '', shift: h.shift || '', auditor: h.auditor || '',
+                      score: f.score, max: f.max, rating: f.rating,
+                      notes: f.notes || '', severity: f.severity || '' });
+  });
+  if(!hits.length) return null;
+
+  hits.sort((a,b)=> String(b.date).localeCompare(String(a.date)));
+  return { count: hits.length, last: hits[0], hits: hits.slice(0, 6) };
+}
+
+function repeatFlagHtml(id){
+  const r = repeatFindings(id);
+  if(!r) return '';
+  const l = r.last;
+  const scoreTxt = (l.max ? `${Number(l.score).toFixed(1)} / ${l.max}` : '—');
+  const rows = r.hits.map(h=>`
+    <div class="rf-row">
+      <b>${escapeHtml(h.date)}</b>
+      <span>${escapeHtml(h.shift || '—')}</span>
+      <span>${escapeHtml(h.auditor || '—')}</span>
+      <span class="rf-score">${h.max ? Number(h.score).toFixed(1)+' / '+h.max : '—'}</span>
+      <span class="rf-note">${escapeHtml(h.notes || '')}</span>
+    </div>`).join('');
+  return `
+    <details class="rf-box">
+      <summary><span class="rf-warn">⚠ កំហុសដដែលៗ</span>
+        ធ្លាក់ ${r.count} ដង · ចុងក្រោយ ${escapeHtml(l.date)} · ${scoreTxt}</summary>
+      <div class="rf-list">${rows}</div>
+      <p class="rf-note-foot">ប្រព័ន្ធមិនចាត់ទុកកំហុសថាបានដោះស្រាយដោយស្វ័យប្រវត្តិទេ —
+        ទាល់តែមានការផ្ទៀងផ្ទាត់ការកែតម្រូវ។</p>
+    </details>`;
+}
+
 function renderItemRow(pillarKey,item,isStd){
   const id = itemId(pillarKey,item.no);
   const score = scoreFor(item,id,isStd);
@@ -1148,6 +1243,7 @@ function renderItemRow(pillarKey,item,isStd){
   <div class="item-row" data-id="${id}">
     <div class="item-no">${item.no}</div>
     <div class="item-desc">${item.desc}<div class="max-tag">អតិបរមា ${item.max} ពិន្ទុ</div>
+      ${repeatFlagHtml(id)}
       ${item.standard ? `<details class="std-details"><summary>មើលស្តង់ដារលម្អិត</summary><div class="std-text">${escapeHtml(item.standard).replace(/\n/g,'<br>')}</div></details>` : ''}
       ${item.scale ? `<details class="scale-details"><summary>មគ្គុទ្ទេសក៍ការវាយតម្លៃ (0–5)</summary><div class="scale-legend">${item.scale.map((s,n)=>`<div class="scale-cell"><b>${n}</b><span>${escapeHtml(s)}</span></div>`).join('')}</div></details>` : ''}
     </div>
@@ -1343,7 +1439,50 @@ function updateRing(){
 /* ============================================================
    RENDER: KPI / Trend / Settings
    ============================================================ */
+/* Figures the saved audits can answer on their own. Anything the data
+   cannot support is left out rather than guessed — a KPI filled with a
+   number nobody can trace is worse than an empty one. */
+function computedKpiSummary(){
+  const month = (state.store.date || new Date().toISOString().slice(0,10)).slice(0,7);
+  const all = (state.history || []).filter(isOfficialAudit);
+  const thisMonth = all.filter(h => h.month === month);
+
+  const avg = thisMonth.length
+    ? thisMonth.reduce((s,h)=> s + (Number(h.pct)||0) * 100, 0) / thisMonth.length
+    : null;
+  const fails = thisMonth.filter(h => h.autoFail).length;
+  const stores = new Set(thisMonth.map(h => h.store)).size;
+
+  // an item that failed at the same store on more than one visit
+  const seen = {};
+  all.forEach(h=>{
+    (h.faults || []).forEach(f=>{
+      if(!f || !f.itemId) return;
+      const k = h.store + '||' + f.itemId;
+      (seen[k] = seen[k] || new Set()).add(h.date);
+    });
+  });
+  const repeats = Object.keys(seen).filter(k => seen[k].size > 1).length;
+
+  return { month, audits: thisMonth.length, stores, avg, fails, repeats };
+}
+
+function renderKpiSummary(){
+  const el = document.getElementById('kpiAuto');
+  if(!el) return;
+  const s = computedKpiSummary();
+  const cell = (label, value, tone) =>
+    `<div class="kpi-auto-cell${tone?' '+tone:''}"><div class="v">${value}</div><div class="l">${label}</div></div>`;
+  el.innerHTML =
+    cell('សវនកម្មខែ ' + s.month, s.audits) +
+    cell('ហាងបានត្រួតពិនិត្យ', s.stores) +
+    cell('ពិន្ទុមធ្យម', s.avg === null ? '—' : s.avg.toFixed(1) + '%', s.avg !== null && s.avg < 85 ? 'bad' : 'good') +
+    cell('ធ្លាក់ស្វ័យប្រវត្តិ', s.fails, s.fails ? 'bad' : 'good') +
+    cell('ធាតុកំហុសដដែលៗ', s.repeats, s.repeats ? 'warn' : 'good');
+}
+
 function renderKpi(){
+  renderKpiSummary();
   const grid = document.getElementById('kpiGrid');
   let html = `<div class="h">KPI</div><div class="h">គោលដៅ</div><div class="h">ជាក់ស្តែង</div><div class="h">ស្ថានភាព</div>`;
   KPIS.forEach((k,i)=>{
@@ -1359,33 +1498,80 @@ function renderKpi(){
   });
   grid.innerHTML = html;
 }
-function renderTrend(){
-  const maxV = 100;
-  document.getElementById('trendChart').innerHTML = MONTHS.map(m=>{
-    const v = state.trend[m]||0;
-    return `<div class="trend-col"><div class="trend-bar" style="height:${Math.max(2,v/maxV*160)}px;" title="${v}%"></div><div class="trend-month">${m}</div></div>`;
-  }).join('');
-  document.getElementById('trendInputs').innerHTML = MONTHS.map(m=>`
-    <div class="field"><label>${m}</label><input type="number" min="0" max="100" data-role="trend" data-m="${m}" value="${state.trend[m]||''}" placeholder="%"></div>
-  `).join('');
+/* ==================================================================
+   PHASE 2 — KPI and trends calculated from the saved audits
+
+   These two pages used to be typed in by hand, month by month, while
+   the system already held every figure. Typing them again invites two
+   problems: a mistyped number, and a page that disagrees with the
+   reports. They are now calculated.
+
+   A manual figure is still possible — some months are corrected for
+   reasons the data cannot know — but it is an override: it needs a
+   reason, it records who set it and when, and it is marked on screen.
+   ================================================================== */
+
+/* Average score per month, across the audits actually saved.
+   Test stores (code 0000) are left out of official figures. */
+function isOfficialAudit(h){
+  if(!h || !h.store) return false;
+  if(/^0000\b/.test(String(h.store).trim())) return false;   // test store
+  return true;
 }
-function autoFillTrendFromHistory(){
-  if(state.history.length===0){ showToast('មិនទាន់មានប្រវត្តិសវនកម្មសម្រាប់គណនាទេ — សូមរក្សាទុកសវនកម្មជាមុនសិន'); return; }
+
+function computedTrend(){
   const sums = {}, counts = {};
-  state.history.forEach(h=>{
-    const mm = (h.month||'').split('-')[1];
+  (state.history || []).forEach(h=>{
+    if(!isOfficialAudit(h)) return;
+    const mm = String(h.month || '').split('-')[1];
     const km = MONTH_INDEX_KM[mm];
     if(!km) return;
-    sums[km] = (sums[km]||0) + h.pct*100;
-    counts[km] = (counts[km]||0) + 1;
+    sums[km] = (sums[km] || 0) + (Number(h.pct) || 0) * 100;
+    counts[km] = (counts[km] || 0) + 1;
   });
-  let filled = 0;
+  const out = {};
   MONTHS.forEach(m=>{
-    if(counts[m]){ state.trend[m] = Number((sums[m]/counts[m]).toFixed(1)); filled++; }
+    if(counts[m]) out[m] = { value: Number((sums[m] / counts[m]).toFixed(1)), audits: counts[m] };
   });
-  renderTrend();
-  scheduleDraftSave();
-  showToast(filled>0 ? `បានបំពេញ ${filled} ខែ ដោយពិន្ទុមធ្យមពីប្រវត្តិសវនកម្ម (គ្រប់ហាង)` : 'គ្មានប្រវត្តិសវនកម្មត្រូវនឹងខែណាមួយទេ');
+  return out;
+}
+
+/** What to show for a month: the override if one was set, else the calculation. */
+function trendValue(m, auto){
+  const o = state.trendOverride && state.trendOverride[m];
+  if(o && o.value !== '' && o.value !== undefined && o.value !== null){
+    return { value: Number(o.value), manual: true, info: o };
+  }
+  if(auto[m]) return { value: auto[m].value, manual: false, audits: auto[m].audits };
+  return { value: 0, manual: false, audits: 0 };
+}
+
+function renderTrend(){
+  const maxV = 100;
+  const auto = computedTrend();
+
+  document.getElementById('trendChart').innerHTML = MONTHS.map(m=>{
+    const v = trendValue(m, auto);
+    const title = v.manual
+      ? `${v.value}% · បញ្ចូលដោយដៃ`
+      : `${v.value}% · ពីសវនកម្ម ${v.audits || 0}`;
+    return `<div class="trend-col"><div class="trend-bar${v.manual?' manual':''}" style="height:${Math.max(2, v.value / maxV * 160)}px;" title="${escapeHtml(title)}"></div><div class="trend-month">${m}</div></div>`;
+  }).join('');
+
+  document.getElementById('trendInputs').innerHTML = MONTHS.map(m=>{
+    const v = trendValue(m, auto);
+    const hasAuto = !!auto[m];
+    const note = v.manual
+      ? `<span class="t-manual" title="${escapeHtml((v.info && v.info.reason) || '')}">បញ្ចូលដោយដៃ</span>`
+      : hasAuto ? `<span class="t-auto">ស្វ័យប្រវត្តិ · សវនកម្ម ${auto[m].audits}</span>`
+                : `<span class="t-none">គ្មានទិន្នន័យ</span>`;
+    return `<div class="field">
+      <label>${m} ${note}</label>
+      <input type="number" min="0" max="100" data-role="trend" data-m="${m}"
+             value="${hasAuto || v.manual ? v.value : ''}" placeholder="%">
+      ${v.manual ? `<button type="button" class="t-reset" data-role="trend-reset" data-m="${m}">ប្រើតម្លៃស្វ័យប្រវត្តិ</button>` : ''}
+    </div>`;
+  }).join('');
 }
 function renderSettings(){
   document.getElementById('storeEditor').innerHTML = state.stores.map((s,i)=>`
@@ -1803,15 +1989,68 @@ document.getElementById('kpiGrid').addEventListener('change', e=>{
   }
 });
 
-/* Trend events */
-document.getElementById('trendInputs').addEventListener('input', e=>{
-  if(e.target.dataset.role==='trend'){
-    state.trend[e.target.dataset.m] = Number(e.target.value)||0;
-    renderTrend();
-    scheduleDraftSave();
+/* Trend events — typing a figure overrides the calculation, and an
+   override has to say why. The change is recorded with who and when. */
+document.getElementById('trendInputs').addEventListener('change', e=>{
+  if(e.target.dataset.role!=='trend') return;
+  const m = e.target.dataset.m;
+  const raw = String(e.target.value || '').trim();
+  const auto = computedTrend();
+
+  if(raw === ''){
+    delete state.trendOverride[m];
+    delete state.trend[m];
+    renderTrend(); scheduleDraftSave();
+    return;
   }
+
+  const value = Math.max(0, Math.min(100, Number(raw) || 0));
+  // typing the figure the system already calculated is not an override
+  if(auto[m] && Math.abs(auto[m].value - value) < 0.05){
+    delete state.trendOverride[m];
+    delete state.trend[m];
+    renderTrend(); scheduleDraftSave();
+    return;
+  }
+
+  const reason = (window.prompt(
+    `ប្ដូរពិន្ទុខែ ${m} ទៅ ${value}%\n\nសូមបញ្ជាក់មូលហេតុ (យ៉ាងតិច ៥ តួអក្សរ):`, '') || '').trim();
+  if(reason.length < 5){
+    showToast('ត្រូវបញ្ជាក់មូលហេតុ — តម្លៃត្រឡប់ទៅស្វ័យប្រវត្តិវិញ');
+    delete state.trendOverride[m];
+    delete state.trend[m];
+    renderTrend();
+    return;
+  }
+
+  const who = (window.QC_USER && (window.QC_USER.name || window.QC_USER.email))
+            || state.store.auditor || '—';
+  state.trendOverride[m] = { value, reason, by: who, at: new Date().toISOString() };
+  state.trend[m] = value;          // kept so older code paths still read a number
+  renderTrend();
+  scheduleDraftSave();
+  showToast(`បានកត់ត្រាការបញ្ចូលដោយដៃសម្រាប់ខែ ${m}`);
 });
-document.getElementById('btnAutoFillTrend').addEventListener('click', autoFillTrendFromHistory);
+
+document.getElementById('trendInputs').addEventListener('click', e=>{
+  if(e.target.dataset.role!=='trend-reset') return;
+  const m = e.target.dataset.m;
+  delete state.trendOverride[m];
+  delete state.trend[m];
+  renderTrend();
+  scheduleDraftSave();
+  showToast(`ខែ ${m} ត្រឡប់ទៅតម្លៃស្វ័យប្រវត្តិវិញ`);
+});
+
+document.getElementById('btnAutoFillTrend').addEventListener('click', ()=>{
+  const n = Object.keys(state.trendOverride || {}).length;
+  state.trendOverride = {};
+  state.trend = {};
+  renderTrend();
+  scheduleDraftSave();
+  showToast(n ? `បានដកការបញ្ចូលដោយដៃ ${n} ខែ — ប្រើតម្លៃស្វ័យប្រវត្តិទាំងអស់`
+              : 'ពិន្ទុនិន្នាការគណនាស្វ័យប្រវត្តិពីប្រវត្តិសវនកម្មរួចហើយ');
+});
 
 /* Settings events */
 document.getElementById('view-settings').addEventListener('input', e=>{
@@ -3377,11 +3616,11 @@ if(hadDraft && (state.store.store || state.store.date)) showToast('បានស�
 })();
 </script>
 
-<script src="/qc-settings-save.js?v=20261104a"></script>
-<script src="/qc-glossary.js?v=20261104a"></script>
-<script src="/qc-i18n-dict.js?v=20261104a"></script>
-<script src="/qc-i18n-dict2.js?v=20261104a"></script>
-<script src="/qc-i18n.js?v=20261104a"></script>
-<script src="/qc-print-report.js?v=20261104a"></script>
+<script src="/qc-settings-save.js?v=20261104b"></script>
+<script src="/qc-glossary.js?v=20261104b"></script>
+<script src="/qc-i18n-dict.js?v=20261104b"></script>
+<script src="/qc-i18n-dict2.js?v=20261104b"></script>
+<script src="/qc-i18n.js?v=20261104b"></script>
+<script src="/qc-print-report.js?v=20261104b"></script>
 </body>
 </html>
